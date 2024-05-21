@@ -1,5 +1,5 @@
 from gurobipy import *
-from models import *
+from util import *
 
 # Data
 # FLInstanceGenerator(n, T): A class to generate random instances, and construct 
