@@ -28,7 +28,7 @@ class OfflineMIP:
         print(self.z)
         print(self.zeta)
         print(self.y)
-        for t in range(1, self.T):
+        for t in range(1, self.T + 1):
             t_index = t - 1
             for i in range(1, t + 1):
                 i_index = i - 1
@@ -58,7 +58,7 @@ class OfflineMIP:
     def add_atmostonefacility_constraints(self, instance: FLFullInstance) -> None:
         for t in range(1, self.T):
             t_index = t - 1
-            self.model.addConstr(quicksum(self.y[t_index][j] for j in range(t)) + 1 >= quicksum(self.y[t_index + 1][j] for j in range(t)), name = f"C_atmostonefacility_{t}")
+            self.model.addConstr(quicksum(self.y[t_index][j] for j in range(t)) + 1 >= quicksum(self.y[t_index + 1][j] for j in range(t+1)), name = f"C_atmostonefacility_{t}")
         self.model.update()
 
     def add_objective_function(self, instance: FLFullInstance) -> None:
@@ -67,7 +67,7 @@ class OfflineMIP:
 
     def configure_model(self, instance: FLFullInstance) -> None:
         '''
-        Set up variables, constraints, and objective function given instance.
+        Set up variables, constraints, and objective function given a full instance.
         '''
         self.T = instance.shape.T
         self.add_variables(instance)
@@ -91,7 +91,10 @@ class OfflineMIP:
                     if self.z[t_index][i_index][j].x > 0.5:
                         print(f"    - Facility {j} serves demand point {i}")
                         print(f"    - z_{t}_{i}_{j} = {self.z[t_index][i_index][j].x}")
-                        print(f"    - y_{t}_{j} = {self.y[t_index][j-1].x}")
+                        if j == 0:
+                            print(f"    - Facility 0 is not constrained by y.")
+                        else:
+                            print(f"    - y_{t}_{j} = {self.y[t_index][j-1].x}")
 
     def write_model(self, filename: str = "OfflineMIP.lp") -> None:
         '''Write model to file.'''
