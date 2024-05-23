@@ -47,7 +47,7 @@ def euclidean_distance(point_a: DPoint, point_b: DPoint) -> float:
 class FLFullInstance:
     def __init__(self, shape: FLInstanceShape) -> None:
         self.shape: FLInstanceShape = shape
-        self.x: List[DPoint] = [DPoint(np.zeros(self.shape.n)) for _ in range(self.shape.T + 1)]
+        self.points: List[DPoint] = [DPoint(np.zeros(self.shape.n)) for _ in range(self.shape.T + 1)]
         self.Gamma: float = 0.0
         self.distances: np.ndarray = np.zeros((self.shape.T + 1, self.shape.T + 1))
         self.distance: Callable[[DPoint, DPoint], float] = euclidean_distance
@@ -62,7 +62,7 @@ class FLFullInstance:
                 if i == j:
                     self.distances[i][j] = 0.0
                 else:
-                    self.distances[i][j] = self.distance(self.x[i], self.x[j])
+                    self.distances[i][j] = self.distance(self.points[i], self.points[j])
                     self.distances[j][i] = self.distances[i][j]
 
     def get_distance(self, i: int, j: int) -> float:
@@ -71,7 +71,7 @@ class FLFullInstance:
         '''
         return self.distances[i][j]
 
-    def set_x_random(self, low: int = 5, high: int = 15, Gamma: float = None) -> None:
+    def set_random(self, low: int = 5, high: int = 15, Gamma: float = None) -> None:
         '''
         Set demand points by instantiating and calling on an FLDistribution object.
         Update distance matrix.
@@ -81,11 +81,11 @@ class FLFullInstance:
             self.Gamma = Gamma
         else:
             self.Gamma = dist.gamma_interval(low, high)
-        self.x = dist.x_unit_square()
+        self.points = dist.x_unit_square()
         self.set_distance_matrix()
         self.is_set = True
 
-    def read_x_from_file(self, filename: str) -> None:
+    def read_from_file(self, filename: str) -> None:
         '''
         Read demand points from file.
         Update distance matrix.
@@ -97,16 +97,16 @@ class FLFullInstance:
     def print(self) -> None:
         print(f"n: {self.shape.n}")
         print(f"T: {self.shape.T}")
-        print(f"Gamma: {self.shape.Gamma}")
+        print(f"Gamma: {self.Gamma}")
         for t in range(self.shape.T + 1):
-            print(f"x_{t}: {self.x[t].x}")
+            print(f"x_{t}: {self.points[t].x}")
 
 # class OnlineWrapper (?)
 
 def main():
     instance = FLFullInstance(INSTANCE_SHAPES["test"])
     instance.print()
-    instance.set_x_random()
+    instance.set_random()
 
 if __name__ == '__main__':
     main()
