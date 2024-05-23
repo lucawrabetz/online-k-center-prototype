@@ -1,17 +1,20 @@
-from models import OfflineMIP, OnlineCAlgorithm
+from models import OfflineMIP, OnlineCVCTAlgorithm
 from util import FLFullInstance, INSTANCE_SHAPES
 
 def main():
-    instance = FLFullInstance(INSTANCE_SHAPES["test"])
+    instance = FLFullInstance(INSTANCE_SHAPES["small"])
     instance.set_random()
     instance.print()
     mip = OfflineMIP()
     mip.configure_solver(instance)
-    mip.write_model("test.lp")
-    # mip.solve()
-    ca = OnlineCAlgorithm()
-    ca.configure_solver(instance)
-    ca.solve()
+    print("SOLVING OFFLINE MIP...")
+    print()
+    mip.solve()
+    print()
+    print("SOLVING ONLINE CVTCA...")
+    algo = OnlineCVCTAlgorithm()
+    algo.configure_solver(instance)
+    algo.solve()
 
 if __name__ == '__main__':
     main()

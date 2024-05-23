@@ -4,6 +4,7 @@ from typing import List
 from gurobipy import Model, GRB, quicksum
 from util import FLFullInstance
 
+
 class OfflineMIP:
     def __init__(self) -> None:
         '''Constructs blank gurobi model.'''
@@ -98,119 +99,130 @@ class OfflineMIP:
         '''Write model to file.'''
         self.model.write(filename)
 
+class CVCTState:
+    def __init__(self) -> None:
+        self.T: int = None
+        self.num_facilities: int = None
+        self.t_index: int = None
+        self.cum_var_cost: float = None
+        self.facilities: List[int] = None
+        self.distance_to_closest_facility: List[float] = None
+        self.service_costs: List[float] = None
 
-class OnlineCAlgorithm:
+    def configure_state(self, instance: FLFullInstance) -> None:
+        '''
+        Configure algorithm global state.
+            - self.facilities: List indexed by time t, index: t -> 0: 0, ... T: T, where self.facilities[t] == -1 means no facility is built at time t, and self.facilities[t] == i, i \in [0, T] means facility i is built at time t. The list is unique, of course, and initialized as [0, -1, ... , -1].
+            - self.distance_to_closest_facility: List indexed by time t, index: t -> 0: 0.0, ... T: 0.0, where self.distance_to_closest_facility[t] == -1 means the algorithm has not reached t, so the point "doesn't exist" in the online setting and the distance is uninitialized. self.distance_to_closest_facility[t] is equivalent to s_t(F_t)_i, i.e. s_t(F_t) for a fixed i -> min_{j \in F_t} d(x_i, x_j), in the paper.
+            - self.facility_service_costs: List indexed by time t, index: t -> 0: 0.0, ... T: 0.0, where self.facility_service_costs[t] == s_t(F_t) in the paper, which is evaluated and summed to compute the objective function c_t(F_t).
+        '''
+        self.T = instance.shape.T
+        self.num_facilities = 1
+        self.t_index = 1
+        self.cum_var_cost = 0.0
+        self.facilities = [-1 if t > 0 else 0 for t in range(self.T + 1)]
+        self.distance_to_closest_facility = [-1 if t > 0 else 0.0 for t in range(self.T + 1)]
+        self.service_costs = [-1 if t > 0 else 0.0 for t in range(self.T + 1)]
+
+    def update_distances_new_facility(self, instance: FLFullInstance, ell: int) -> None:
+        '''For all points i = 1, ..., self.t_index, update self.distance_to_closest_facility[i] if the new facility is closer to x_i.'''
+        for i in range(1, self.t_index + 1):
+            new_distance = instance.get_distance(i, ell)
+            if new_distance < self.distance_to_closest_facility[i]:
+                self.distance_to_closest_facility[i] = new_distance
+
+    def update_distances_new_point(self, instance: FLFullInstance) -> None:
+        '''compute closest facility to point, update self.distance_to_closest_facility (only at self.t_index).'''
+        min_distance = sys.float_info.max
+        for j in self.facilities:
+            if j == -1:
+                continue
+            new_distance = instance.get_distance(self.t_index, j)
+            min_distance = min(min_distance, new_distance)
+        self.distance_to_closest_facility[self.t_index] = min_distance
+
+    def update(self, instance: FLFullInstance, ell: int = None, service_cost: float = None) -> None:
+        '''
+        Update algorithm state. This can be triggered by:
+            - A new point self.offline_instance.points[self.t_index] arriving (ell = None, service_cost = None)
+            - A new facility (ell) has been built
+            - An iteration has ended and we have the final service cost for the time period (previous + new point on previous facility set)
+        '''
+        if ell and service_cost:
+            raise ValueError("ell and service_cost cannot be set at the same time.")
+        elif ell:
+            print(f"***** Updating state at time {self.t_index}, to add facility {ell}: {instance.points[ell].x} *****")
+            self.facilities[self.t_index] = ell
+            self.num_facilities += 1
+            self.update_distances_new_facility(instance, ell)
+            self.cum_var_cost = self.service_cost(new_facility = True)
+            self.t_index += 1
+            print(f"Facilities: {self.facilities}, distances: {self.distance_to_closest_facility}.")
+        elif service_cost:
+            print(f"Updating state at time {self.t_index}, for service cost {service_cost}.")
+            self.facilities[self.t_index] = -1
+            self.service_costs[self.t_index] = service_cost
+            self.cum_var_cost += service_cost
+            self.t_index += 1
+            print(f"Facilities: {self.facilities}, distances: {self.distance_to_closest_facility}.")
+        else:
+            print(f"Updating state at time {self.t_index} to add demand point {self.t_index}: {instance.points[self.t_index].x}.")
+            self.update_distances_new_point(instance)
+            print(f"Distances after update: {self.distance_to_closest_facility}.")
+
+    def service_cost(self, new_facility: bool = False) -> float:
+        '''
+        The updated self.distance_to_closest_facility[self.t_index] encodes the correct current facility set. 
+            - if no facility has been built since the last distance update, self.service_costs[self.t_index - 1] is a lower bound.
+            - if a new facility has been built we have to check the whole distance list as the new faciility may have better served some point that was the previous max min.
+        '''
+        if new_facility: return max(self.distance_to_closest_facility[:self.t_index + 1])
+        else: return max(self.distance_to_closest_facility[self.t_index], self.service_costs[self.t_index - 1])
+
+class OnlineCVCTAlgorithm:
     def __init__(self) -> None:
         self.offline_instance: FLFullInstance = None
         self.T: int = None
         self.Gamma: float = None
-        self.serve_cost_count: float = None
-        # See comment in configure_solver for explanation self.facilities.
-        self.facilities: List[int] = None
-        self.facilities_last_update: List[int] = None
-        self.last_update_tindex: int = None
-        self.facility_delta: int = None
-        self.assignment: List[int] = None
-        self.distance_to_assigned: List[float] = None
-        self.num_facilities: int = None
-        self.t_index: int = None
+        self.cum_var_cost: float = None
+        self.state: CVCTState = CVCTState()
 
     def configure_solver(self, instance: FLFullInstance) -> None:
-        '''
-        Configure algorithm global state.
-            - self.facilities: List indexed by time t, index: t -> 0: 0, ... T: T, where self.facilities[t] == -1 means no facility is built at time t, and self.facilities[t] == i, i \in [0, T] means facility i is built at time t. The list is unique, of course, and initialized as [0, -1, ... , -1].
-            - self.distance_to_assigned: List indexed by time t, index: t -> 0: 0.0, ... T: 0.0, where self.distance_to_assigned[t] == -1 means the algorithm has not reached t, so the point "doesn't exist" in the online setting and the distance is uninitialized. self.distance_to_assigned[t] is equivalent to s_t(F_t)_i, i.e. s_t(F_t) for a fixed i -> min_{j \in F_t} d(x_i, x_j), in the paper.
-            - self.facility_service_costs: List indexed by time t, index: t -> 0: 0.0, ... T: 0.0, where self.facility_service_costs[t] == s_t(F_t) in the paper, which is evaluated and summed to compute the objective function c_t(F_t).
-        '''
         if not instance.is_set: raise ValueError("Instance must be set before configuring solver.")
         self.offline_instance = instance
         self.T = instance.shape.T
         self.Gamma = instance.Gamma
-        self.serve_cost_count = 0.0
-        self.facilities = [-1 if t > 0 else 0 for t in range(self.T + 1)]
-        self.facilities_last_update = self.facilities.copy()
-        self.last_update_tindex = 0
-        self.facility_delta = -1
-        self.assignment = [-1 if t > 0 else 0 for t in range(self.T + 1)]
-        self.distance_to_assigned = [-1 if t > 0 else 0.0 for t in range(self.T + 1)]
-        self.facility_service_costs = [0.0 for t in range(self.T + 1)]
-        self.num_facilities = 1
-        self.t_index = 1
+        self.state.configure_state(instance)
 
-
-    def next_facility_service_cost_same_set(self) -> float:
-        '''Called at the start of an iteration, haven't decided to build a new facility yet, but distances and facility_service_costs are updated to t_index with assignments assuming no facility is built.'''
-        return max(self.distance_to_assigned[self.t_index], self.facility_service_costs[self.t_index - 1])
-
-    # def objective_cost_evaluation(self, facilities: List[int] = None) -> float:
-    #     if facilities:
-    #     else:
-    #         self.facility_service_cost_evaluation()
-    #         return self.Gamma * (self.num_facilities - 1) + sum(self.facility_service_costs[t] for t in range(1, self.t_index + 1))
-    
     def greedy_facility_selection(self) -> int:
-        pass
+        '''Distances updated with new point on previous facility set before calling.'''
+        ell = -1
+        max_distance = -1
+        for i in range(1, self.state.t_index + 1):
+            if self.state.distance_to_closest_facility[i] > max_distance:
+                ell = i
+                max_distance = self.state.distance_to_closest_facility[i]
+        return ell
 
-    def update_assignment(self) -> None:
-        pass
+    def add_facility(self) -> None:
+        ell = self.greedy_facility_selection()
+        self.state.update(self.offline_instance, ell)
 
-    def update_facility_service_costs(self) -> None:
-        distances = [self.distances_to_assigned[i] for i in range(0, self.t_index + 1)]
-        self.facility_service_costs[self.t_index] = max(distances)
-
-    def update_distances_new_facility(self, ell: int) -> None:
-        '''For all points i = 1, ..., self.t_index, update self.distance_to_assigned[i] if the new facility is closer to x_i.'''
-        for i in range(self.t_index):
-            new_distance = self.offline_instance.get_distance(i, ell)
-            if new_distance < self.distance_to_assigned[i]:
-                self.distance_to_assigned[i] = new_distance
-
-    def update_distances_new_point(self) -> None:
-        '''compute closest facility to point, update self.distance_to_assigned (only at self.t_index).'''
-        min_distance = sys.float_info.max
-        for t in range(self.t_index):
-            if self.facilities[t] != -1:
-                j = self.facilities[t]
-                min_distance = min(min_distance, self.offline_instance.get_distance(self.t_index, j))
-        self.distance_to_assigned[self.t_index] = min_distance
-
-    def update_state(self, ell: int = None) -> None:
-        '''
-        Update algorithm state. This can be triggered by two events in an iteration:
-            - A new point self.offline_instance.points[self.t_index] has arrived in an online fashion.
-                - compute closest facility to point, update self.distance_to_assigned (only at self.t_index)
-            - A new facility has been built.
-                - for all points i = 1, ..., self.t_index, update self.distance_to_assigned[i] if the new facility is closer to x_i.
-        If ell, the facility index, is None, then we assume a new point has arrived (offline_instance.points[self.t_index] is the new point). 
-        '''
-        print(f"Updating state at time {self.t_index}")
-        print(f"Facilities: {self.facilities}")
-        print(f"Distance to assigned: {self.distance_to_assigned}")
-        if ell:
-            print(f"Updating for new facility {ell}")
-            self.update_distances_new_facility(ell)
-        else:
-            print(f"Updating for new point {self.t_index}")
-            self.update_distances_new_point()
-        print(f"Distance to assigned after update: {self.distance_to_assigned}")
-        print(f"\n")
+    def no_facility_update(self, service_cost: float) -> None:
+        self.state.update(self.offline_instance, service_cost = service_cost)
 
     def single_iteration(self) -> None:
-        print(f"\nStarting iteration at time {self.t_index}")
-        self.update_state()
-        if self.serve_cost_count + self.next_facility_service_cost_same_set() > self.Gamma:
-            ell = self.greedy_facility_selection()
-            self.facilities[self.t_index] = ell
-            self.num_facilities += 1
-            update_state()
-            self.serve_cost_count = self.facility_service_costs[self.t_index]
+        print(f"Starting iteration at time {self.state.t_index}")
+        self.state.update(self.offline_instance)
+        nobuild_service_cost = self.state.service_cost()
+        print(f"cumVarCost: {self.state.cum_var_cost}, gamma: {self.Gamma}, no build service cost: {nobuild_service_cost}")
+        if self.state.cum_var_cost + nobuild_service_cost > self.Gamma:
+            self.add_facility()
         else:
-            self.facilities[self.t_index] = -1
-            self.update_state()
-            self.serve_cost_count += self.facility_service_costs[self.t_index]
+            self.no_facility_update(nobuild_service_cost)
+        print()
         
 
     def solve(self):
-        while self.t_index <= self.T:
+        while self.state.t_index <= self.T:
             self.single_iteration()
-            self.t_index += 1

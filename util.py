@@ -18,6 +18,7 @@ class FLInstanceShape:
 
 INSTANCE_SHAPES = {
     "test": FLInstanceShape(),
+    "small": FLInstanceShape(10)
 }
 
 class FLDistribution:
