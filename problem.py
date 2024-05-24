@@ -14,6 +14,10 @@ class DPoint:
         self.x: np.ndarray = np.asarray(x)
         self.n: int = len(x)
 
+    def print(self) -> None:
+        with np.printoptions(precision=4, suppress=True):
+            logging.info(self.x)
+
 
 class FLInstanceShape:
     """
@@ -123,11 +127,9 @@ class FLOfflineInstance(Data):
         self.set_distance_matrix()
 
     def print(self) -> None:
-        logging.info(f"n: {self.shape.n}")
-        logging.info(f"T: {self.shape.T}")
-        logging.info(f"Gamma: {self.Gamma}")
+        logging.info(f"n: {self.shape.n}, T: {self.shape.T}, Gamma: {self.Gamma}.")
         for t in range(self.shape.T + 1):
-            logging.info(f"x_{t}: {self.points[t].x}")
+            self.points[t].print()
 
 
 class CVCTState(Data):

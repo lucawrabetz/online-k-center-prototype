@@ -27,6 +27,7 @@ class OfflineMIP(IFLSolver):
         """Constructs blank gurobi model."""
         self.T: int = 0
         self.model: Model = Model("OfflineMIP")
+        self.model.setParam("LogToConsole", 0)
         self.zeta: List[GRBVar] = []
         self.z: List[GRBVar] = []
         self.y: List[GRBVar] = []
