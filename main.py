@@ -1,8 +1,8 @@
 from solvers import OfflineMIP, OnlineCVCTAlgorithm
-from problem import FLFullInstance, INSTANCE_SHAPES
+from problem import FLOfflineInstance, INSTANCE_SHAPES
 
 def main():
-    instance = FLFullInstance(INSTANCE_SHAPES["small"])
+    instance = FLOfflineInstance(INSTANCE_SHAPES["small"])
     instance.set_random()
     instance.print()
     mip = OfflineMIP()
@@ -14,7 +14,8 @@ def main():
     print("SOLVING ONLINE CVTCA...")
     algo = OnlineCVCTAlgorithm()
     algo.configure_solver(instance)
-    algo.solve()
+    solution = algo.solve()
+    solution.print()
 
 if __name__ == '__main__':
     main()
