@@ -8,7 +8,6 @@ class DPoint:
         self.x: np.ndarray = np.asarray(x)
         self.n: int = len(x)
 
-
 class FLInstanceShape:
     def __init__(self, n: int = 2, T: int = 3) -> None:
         self.n: int = n
@@ -43,11 +42,15 @@ class FLDistribution:
         '''
         return [DPoint(self.rng.random((self.shape.n,))) for _ in range(self.shape.T + 1)]
 
-### distance functions
+### distance functions - metric for instances
+### instance class has a callable attribute for this
 def euclidean_distance(point_a: DPoint, point_b: DPoint) -> float:
     return np.linalg.norm(point_a.x - point_b.x)
 
 class FLOfflineInstance:
+    '''
+    Class to hold offline instance data for the online min max center problem.
+    '''
     def __init__(self, shape: FLInstanceShape) -> None:
         self.shape: FLInstanceShape = shape
         self.points: List[DPoint] = [DPoint(np.zeros(self.shape.n)) for _ in range(self.shape.T + 1)]
@@ -105,6 +108,9 @@ class FLOfflineInstance:
             logging.info(f"x_{t}: {self.points[t].x}")
 
 class CVCTState:
+    '''
+    Class to hold state for the CVCTCA algorithm.
+    '''
     def __init__(self) -> None:
         self.T: int = None
         self.n: int = None
@@ -131,14 +137,18 @@ class CVCTState:
         self.service_costs = [-1 if t > 0 else 0.0 for t in range(self.T + 1)]
 
     def update_distances_new_facility(self, instance: FLOfflineInstance, ell: int) -> None:
-        '''For all points i = 1, ..., self.t_index, update self.distance_to_closest_facility[i] if the new facility is closer to x_i.'''
+        '''
+        Check if newly built facility ell is closer to any points than their current closest facility, update distances accordingly.
+        '''
         for i in range(1, self.t_index + 1):
             new_distance = instance.get_distance(i, ell)
             if new_distance < self.distance_to_closest_facility[i]:
                 self.distance_to_closest_facility[i] = new_distance
 
     def update_distances_new_point(self, instance: FLOfflineInstance) -> None:
-        '''compute closest facility to point, update self.distance_to_closest_facility (only at self.t_index).'''
+        '''
+        Compute closest facility to point, update distances accordingly (only at self.t_index).
+        '''
         min_distance = sys.float_info.max
         for j in self.facilities:
             if j == -1:
@@ -180,12 +190,15 @@ class CVCTState:
         '''
         The updated self.distance_to_closest_facility[self.t_index] encodes the correct current facility set. 
             - if no facility has been built since the last distance update, self.service_costs[self.t_index - 1] is a lower bound.
-            - if a new facility has been built we have to check the whole distance list as the new faciility may have better served some point that was the previous max min.
+            - if a new facility has been built we have to check the whole distance list as the new facility may have better served some point that was the previous max min.
         '''
         if new_facility: return max(self.distance_to_closest_facility[:self.t_index + 1])
         else: return max(self.distance_to_closest_facility[self.t_index], self.service_costs[self.t_index - 1])
 
 class FLSolution:
+    '''
+    Class to hold a solution for the online min max center problem.
+    '''
     def __init__(self) -> None:
         self.n: int = None
         self.T: int = None
@@ -205,7 +218,6 @@ class FLSolution:
         self.num_facilities = state.num_facilities
         self.facilities = state.facilities
         self.distance_to_closest_facility = state.distance_to_closest_facility
-# class OnlineWrapper (?)
 
 def main():
     instance = FLOfflineInstance(INSTANCE_SHAPES["test"])
