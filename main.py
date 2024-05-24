@@ -1,5 +1,5 @@
-from models import OfflineMIP, OnlineCVCTAlgorithm
-from util import FLFullInstance, INSTANCE_SHAPES
+from solvers import OfflineMIP, OnlineCVCTAlgorithm
+from problem import FLFullInstance, INSTANCE_SHAPES
 
 def main():
     instance = FLFullInstance(INSTANCE_SHAPES["small"])

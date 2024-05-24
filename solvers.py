@@ -4,7 +4,6 @@ from typing import List
 from gurobipy import Model, GRB, quicksum
 from util import FLFullInstance
 
-
 class OfflineMIP:
     def __init__(self) -> None:
         '''Constructs blank gurobi model.'''
