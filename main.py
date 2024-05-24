@@ -6,8 +6,9 @@ from log_config import setup_logging
 setup_logging()
 import logging
 
+
 def main():
-    logging.info('Started')
+    logging.info("Started")
     instance = FLOfflineInstance(INSTANCE_SHAPES["small"])
     instance.set_random()
     instance.print()
@@ -22,7 +23,8 @@ def main():
     algo.configure_solver(instance)
     solution = algo.solve()
     solution.print()
-    logging.info('Finished')
+    logging.info("Finished")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
