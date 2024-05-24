@@ -1,4 +1,5 @@
 import sys
+import logging
 import numpy as np
 from typing import Callable, List
 
@@ -14,8 +15,8 @@ class FLInstanceShape:
         self.T: int = T
 
     def print(self) -> None:
-        print(f"n: {self.n}")
-        print(f"T: {self.T}")
+        logging.info(f"n: {self.n}")
+        logging.info(f"T: {self.T}")
 
 INSTANCE_SHAPES = {
     "test": FLInstanceShape(),
@@ -97,11 +98,11 @@ class FLOfflineInstance:
         self.set_distance_matrix()
 
     def print(self) -> None:
-        print(f"n: {self.shape.n}")
-        print(f"T: {self.shape.T}")
-        print(f"Gamma: {self.Gamma}")
+        logging.info(f"n: {self.shape.n}")
+        logging.info(f"T: {self.shape.T}")
+        logging.info(f"Gamma: {self.Gamma}")
         for t in range(self.shape.T + 1):
-            print(f"x_{t}: {self.points[t].x}")
+            logging.info(f"x_{t}: {self.points[t].x}")
 
 class CVCTState:
     def __init__(self) -> None:
@@ -156,24 +157,24 @@ class CVCTState:
         if ell and service_cost:
             raise ValueError("ell and service_cost cannot be set at the same time.")
         elif ell:
-            print(f"***** Updating state at time {self.t_index}, to add facility {ell}: {instance.points[ell].x} *****")
+            logging.info(f"***** Updating state at time {self.t_index}, to add facility {ell}: {instance.points[ell].x} *****")
             self.facilities[self.t_index] = ell
             self.num_facilities += 1
             self.update_distances_new_facility(instance, ell)
             self.cum_var_cost = self.service_cost(new_facility = True)
             self.t_index += 1
-            print(f"Facilities: {self.facilities}, distances: {self.distance_to_closest_facility}.")
+            logging.debug(f"Facilities: {self.facilities}, distances: {self.distance_to_closest_facility}.")
         elif service_cost:
-            print(f"Updating state at time {self.t_index}, for service cost {service_cost}.")
+            logging.debug(f"Updating state at time {self.t_index}, for service cost {service_cost}.")
             self.facilities[self.t_index] = -1
             self.service_costs[self.t_index] = service_cost
             self.cum_var_cost += service_cost
             self.t_index += 1
-            print(f"Facilities: {self.facilities}, distances: {self.distance_to_closest_facility}.")
+            logging.debug(f"Facilities: {self.facilities}, distances: {self.distance_to_closest_facility}.")
         else:
-            print(f"Updating state at time {self.t_index} to add demand point {self.t_index}: {instance.points[self.t_index].x}.")
+            logging.debug(f"Updating state at time {self.t_index} to add demand point {self.t_index}: {instance.points[self.t_index].x}.")
             self.update_distances_new_point(instance)
-            print(f"Distances after update: {self.distance_to_closest_facility}.")
+            logging.info(f"Distances after update: {self.distance_to_closest_facility}.")
 
     def service_cost(self, new_facility: bool = False) -> float:
         '''
@@ -194,8 +195,8 @@ class FLSolution:
         self.service_costs: List[float] = None
 
     def print(self) -> None:
-        print(f"Built {self.num_facilities} facilities: {self.facilities}")
-        print(f"Final service distances: {self.distance_to_closest_facility}")
+        logging.info(f"Built {self.num_facilities - 1} facilities (in addition to x_0): {self.facilities}")
+        logging.info(f"Final service distances: {self.distance_to_closest_facility}")
 
     def from_cvtca(self, state: CVCTState) -> None:
         self.n = state.n
@@ -208,7 +209,6 @@ class FLSolution:
 
 def main():
     instance = FLOfflineInstance(INSTANCE_SHAPES["test"])
-    instance.print()
     instance.set_random()
 
 if __name__ == '__main__':

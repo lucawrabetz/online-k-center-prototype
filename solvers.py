@@ -1,5 +1,6 @@
 import sys
 import numpy as np
+import logging
 from abc import ABC, abstractmethod
 from typing import List
 from gurobipy import Model, GRB, quicksum
@@ -46,7 +47,7 @@ class OfflineMIP(IFLSolver):
             for i in range(1, t + 1):
                 i_index = i - 1
                 for j in range(1, t + 1):
-                    # print(f"Adding constraint for t = {t}, i = {i}, j = {j}")
+                    # logging.debug(f"Adding constraint for t = {t}, i = {i}, j = {j}")
                     self.model.addConstr(self.z[t_index][i_index][j] <= self.y[t_index][j-1], name = f"C_linkzy_{t}_{i}_{j}")
         self.model.update()
 
@@ -100,12 +101,12 @@ class OfflineMIP(IFLSolver):
         #         i_index = i - 1
         #         for j in range(0, t + 1):
         #             if self.z[t_index][i_index][j].x > 0.5:
-        #                 print(f"    - Facility {j} serves demand point {i}")
-        #                 print(f"    - z_{t}_{i}_{j} = {self.z[t_index][i_index][j].x}")
+        #                 logging.debug(f"    - Facility {j} serves demand point {i}")
+        #                 logging.debug(f"    - z_{t}_{i}_{j} = {self.z[t_index][i_index][j].x}")
         #                 if j == 0:
-        #                     print(f"    - Facility 0 is not constrained by y.")
+        #                     logging.debug(f"    - Facility 0 is not constrained by y.")
         #                 else:
-        #                     print(f"    - y_{t}_{j} = {self.y[t_index][j-1].x}")
+        #                     logging.debug(f"    - y_{t}_{j} = {self.y[t_index][j-1].x}")
 
     def write_model(self, filename: str = "OfflineMIP.lp") -> None:
         '''Write model to file.'''
@@ -144,15 +145,14 @@ class OnlineCVCTAlgorithm(IFLSolver):
         self.state.update(self.offline_instance, service_cost = service_cost)
 
     def single_iteration(self) -> None:
-        print(f"Starting iteration at time {self.state.t_index}")
+        logging.info(f"Starting iteration at time {self.state.t_index}.")
         self.state.update(self.offline_instance)
         nobuild_service_cost = self.state.service_cost()
-        print(f"cumVarCost: {self.state.cum_var_cost}, gamma: {self.Gamma}, no build service cost: {nobuild_service_cost}")
+        logging.info(f"(cumVarCost: {self.state.cum_var_cost}) + (no build service cost: {nobuild_service_cost}) = {self.state.cum_var_cost + nobuild_service_cost}, gamma: {self.Gamma}.")
         if self.state.cum_var_cost + nobuild_service_cost > self.Gamma:
             self.add_facility()
         else:
             self.no_facility_update(nobuild_service_cost)
-        print()
         
     def solve(self) -> FLSolution:
         while self.state.t_index <= self.T:
