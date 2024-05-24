@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import datetime
 
 
 class Data:
@@ -18,7 +18,7 @@ def append_date(base: str, time: bool = True) -> str:
     """
     Append today's date to base string.
     """
-    today = date.today()
+    today = datetime.now()
     if time:
         date_str = today.strftime(DATETIME_FORMAT)
     else:

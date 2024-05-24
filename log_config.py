@@ -29,3 +29,13 @@ def setup_logging():
 
     # Get the root logger and add the console handler to it
     logging.getLogger().addHandler(console_handler)
+
+
+def gurobi_log_file():
+    logs_dir = "logs"
+    if not os.path.exists(logs_dir):
+        os.makedirs(logs_dir)
+    basename = "onlinekcenter_gurobi"
+    filename = append_date(basename, time=True) + ".log"
+    filepath = os.path.join(logs_dir, filename)
+    return filepath

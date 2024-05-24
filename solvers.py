@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from typing import List, Any
 from gurobipy import Model, GRB, quicksum
 from problem import FLOfflineInstance, FLSolution, CVCTState
+from log_config import gurobi_log_file
 
 GRBVar = Any
 
@@ -28,6 +29,7 @@ class OfflineMIP(IFLSolver):
         self.T: int = 0
         self.model: Model = Model("OfflineMIP")
         self.model.setParam("LogToConsole", 0)
+        self.model.setParam("LogFile", gurobi_log_file())
         self.zeta: List[GRBVar] = []
         self.z: List[GRBVar] = []
         self.y: List[GRBVar] = []
