@@ -1,8 +1,9 @@
 import sys
+import time
 import numpy as np
 import logging
 from abc import ABC, abstractmethod
-from typing import List, Any
+from typing import List, Any, Tuple
 from gurobipy import Model, GRB, quicksum
 from problem import FLOfflineInstance, FLSolution, CVCTState
 from log_config import gurobi_log_file
@@ -12,6 +13,10 @@ GRBVar = Any
 
 class IFLSolver(ABC):
     def __init__(self) -> None:
+        self.T: int = 0
+        self.objective: float = 0.0
+        self.running_time_s: float = 0.0
+        self.optimal: bool = False
         pass
 
     @abstractmethod
@@ -26,7 +31,7 @@ class IFLSolver(ABC):
 class OfflineMIP(IFLSolver):
     def __init__(self) -> None:
         """Constructs blank gurobi model."""
-        self.T: int = 0
+        super().__init__()
         self.model: Model = Model("OfflineMIP")
         self.model.setParam("LogToConsole", 0)
         self.model.setParam("LogFile", gurobi_log_file())
@@ -141,25 +146,40 @@ class OfflineMIP(IFLSolver):
         self.add_atmostonefacility_constraints(instance)
         self.add_objective_function(instance)
 
+    def final_facilities_service_costs(self) -> Tuple[List[int], List[float]]:
+        built = [False for _ in range(self.T)]
+        facilities = [
+            0
+        ]  # from 0, ..., T, index t represents what we built at time t, -1 for nothing
+        service_costs = [
+            0.0
+        ]  # from 0, ..., T, index t represents the service cost at time t
+        for t in range(1, self.T + 1):
+            facility = -1
+            t_index = t - 1
+            service_costs.append(self.zeta[t_index].X)
+            for j in range(1, t + 1):
+                j_index = j - 1
+                if built[j_index]:
+                    continue
+                if self.y[t_index][j_index].X > 0.5:
+                    built[j_index] = True
+                    facility = j
+                    break
+            facilities.append(facility)
+        return (facilities, service_costs)
+
     def solve(self) -> FLSolution:
         """Solve model."""
+        start = time.time()
         self.model.optimize()
-        declared_built = [False for _ in range(self.T)]
+        self.running_time_s = time.time() - start
+        self.optimal = self.model.status == GRB.OPTIMAL
         solution = FLSolution()
-        solution.from_mip()
+        state = CVCTState()
+        state.bare_final_state(self.final_facilities_service_costs())
+        solution.from_cvtca(state, self.running_time_s, self.optimal)
         return solution
-        # for t in range(1, self.T + 1):
-        #     t_index = t - 1
-        #     for i in range(1, t + 1):
-        #         i_index = i - 1
-        #         for j in range(0, t + 1):
-        #             if self.z[t_index][i_index][j].x > 0.5:
-        #                 logging.debug(f"    - Facility {j} serves demand point {i}")
-        #                 logging.debug(f"    - z_{t}_{i}_{j} = {self.z[t_index][i_index][j].x}")
-        #                 if j == 0:
-        #                     logging.debug(f"    - Facility 0 is not constrained by y.")
-        #                 else:
-        #                     logging.debug(f"    - y_{t}_{j} = {self.y[t_index][j-1].x}")
 
     def write_model(self, filename: str = "OfflineMIP.lp") -> None:
         """Write model to file."""
@@ -212,8 +232,11 @@ class OnlineCVCTAlgorithm(IFLSolver):
             self.no_facility_update(nobuild_service_cost)
 
     def solve(self) -> FLSolution:
+        start = time.time()
         while self.state.t_index <= self.T:
             self.single_iteration()
+        self.running_time_s = time.time() - start
+        self.optimal = False
         solution = FLSolution()
-        solution.from_cvtca(self.state)
+        solution.from_cvtca(self.state, self.running_time_s, self.optimal)
         return solution

@@ -15,13 +15,13 @@ def main():
     mip = OfflineMIP()
     mip.configure_solver(instance)
     logging.info("SOLVING OFFLINE MIP...")
-    solution = mip.solve()
-    # solution.print()
+    mip_solution = mip.solve()
     logging.info("SOLVING ONLINE CVTCA...")
     algo = OnlineCVCTAlgorithm()
     algo.configure_solver(instance)
-    solution = algo.solve()
-    solution.print()
+    algo_solution = algo.solve()
+    mip_solution.print("MIP")
+    algo_solution.print("CVTCA")
     logging.info("Finished")
 
 

@@ -1,7 +1,7 @@
 import sys
 import logging
 import numpy as np
-from typing import Callable, List
+from typing import Callable, List, Tuple
 from util import Data
 
 
@@ -142,6 +142,7 @@ class CVCTState(Data):
         self.T: int = 0
         self.n: int = 0
         self.Gamma: float = 0.0
+        self.objective: float = 0.0
         self.num_facilities: int = 0
         self.t_index: int = 0
         self.cum_var_cost: float = 0.0
@@ -248,6 +249,28 @@ class CVCTState(Data):
                 self.service_costs[self.t_index - 1],
             )
 
+    def bare_final_state(
+        self, facilities_service_costs: Tuple[List[int], List[float]]
+    ) -> None:
+        """
+        Set final state without any additional processing.
+        """
+        self.facilities = facilities_service_costs[0]
+        self.service_costs = facilities_service_costs[1]
+        for x in self.facilities:
+            if x != -1:
+                self.num_facilities += 1
+        self.t_index = self.T
+        self._is_set = True
+
+    def set_final_objective(self) -> None:
+        """
+        Set final objective value.
+        """
+        self.objective = self.Gamma * (self.num_facilities - 1) + sum(
+            self.service_costs
+        )
+
 
 class FLSolution(Data):
     """
@@ -259,27 +282,47 @@ class FLSolution(Data):
         self.n: int = 0
         self.T: int = 0
         self.Gamma: float = 0.0
+        self.objective: float = 0.0
+        self.running_time_s: float = 0.0
+        self.running_time_ms: float = 0.0
+        self.optimal: bool = False
         self.num_facilities: int = 0
         self.facilities: List[int] = []
+        self.distance_to_closest_facility: List[float] = []
         self.service_costs: List[float] = []
 
-    def print(self) -> None:
+    def print(self, name: str = "Final") -> None:
+        logging.info(
+            f" *** {name} Solution:  Objective: {self.objective:.2f}, Optimal: {self.optimal}, Running Time: {self.running_time_ms:.2f} ms *** "
+        )
         logging.info(
             f"Built {self.num_facilities - 1} facilities (in addition to x_0): {self.facilities}"
         )
-        logging.info(f"Final service distances: {self.distance_to_closest_facility}")
+        logging.info(
+            f"Every time period's service costsservice distances: {self.service_costs}"
+        )
+        logging.info(f" *** *** *** *** *** *** *** *** *** *** *** *** ")
 
-    def from_cvtca(self, state: CVCTState) -> None:
+    def set_running_time(self, time: float) -> None:
+        self.running_time_s = time
+        self.running_time_ms = time * 1000
+
+    def set_optimal(self, optimal: bool) -> None:
+        self.optimal = optimal
+
+    def from_cvtca(self, state: CVCTState, time: float, optimal: bool) -> None:
         self.n = state.n
         self.T = state.T
         self.Gamma = state.Gamma
+        state.set_final_objective()
+        self.objective = state.objective
         self.num_facilities = state.num_facilities
         self.facilities = state.facilities
         self.distance_to_closest_facility = state.distance_to_closest_facility
+        self.service_costs = state.service_costs
+        self.set_running_time(time)
+        self.set_optimal(optimal)
         self._is_set = True
-
-    def from_mip(self) -> None:
-        pass
 
 
 def main():
