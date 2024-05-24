@@ -290,6 +290,7 @@ class FLSolution(Data):
         self.facilities: List[int] = []
         self.distance_to_closest_facility: List[float] = []
         self.service_costs: List[float] = []
+        self.solver: str = ""
 
     def print(self, name: str = "Final") -> None:
         logging.info(
@@ -298,9 +299,7 @@ class FLSolution(Data):
         logging.info(
             f"Built {self.num_facilities - 1} facilities (in addition to x_0): {self.facilities}"
         )
-        logging.info(
-            f"Every time period's service costsservice distances: {self.service_costs}"
-        )
+        logging.info(f"Final time period's service distances: {self.service_costs}")
         logging.info(f" *** *** *** *** *** *** *** *** *** *** *** *** ")
 
     def set_running_time(self, time: float) -> None:
@@ -310,7 +309,12 @@ class FLSolution(Data):
     def set_optimal(self, optimal: bool) -> None:
         self.optimal = optimal
 
-    def from_cvtca(self, state: CVCTState, time: float, optimal: bool) -> None:
+    def set_solver(self, solver: str) -> None:
+        self.solver = solver
+
+    def from_cvtca(
+        self, state: CVCTState, time: float, optimal: bool, solver: str
+    ) -> None:
         self.n = state.n
         self.T = state.T
         self.Gamma = state.Gamma
@@ -322,6 +326,7 @@ class FLSolution(Data):
         self.service_costs = state.service_costs
         self.set_running_time(time)
         self.set_optimal(optimal)
+        self.set_solver(solver)
         self._is_set = True
 
 

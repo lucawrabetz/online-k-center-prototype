@@ -12,6 +12,8 @@ GRBVar = Any
 
 
 class IFLSolver(ABC):
+    NAME: str
+
     def __init__(self) -> None:
         self.T: int = 0
         self.objective: float = 0.0
@@ -29,6 +31,8 @@ class IFLSolver(ABC):
 
 
 class OfflineMIP(IFLSolver):
+    NAME = "MIP"
+
     def __init__(self) -> None:
         """Constructs blank gurobi model."""
         super().__init__()
@@ -178,7 +182,7 @@ class OfflineMIP(IFLSolver):
         solution = FLSolution()
         state = CVCTState()
         state.bare_final_state(self.final_facilities_service_costs())
-        solution.from_cvtca(state, self.running_time_s, self.optimal)
+        solution.from_cvtca(state, self.running_time_s, self.optimal, self.NAME)
         return solution
 
     def write_model(self, filename: str = "OfflineMIP.lp") -> None:
@@ -187,6 +191,8 @@ class OfflineMIP(IFLSolver):
 
 
 class OnlineCVCTAlgorithm(IFLSolver):
+    NAME = "CVTCA"
+
     def __init__(self) -> None:
         self.offline_instance: FLOfflineInstance = FLOfflineInstance()
         self.T: int = 0
@@ -238,5 +244,5 @@ class OnlineCVCTAlgorithm(IFLSolver):
         self.running_time_s = time.time() - start
         self.optimal = False
         solution = FLSolution()
-        solution.from_cvtca(self.state, self.running_time_s, self.optimal)
+        solution.from_cvtca(self.state, self.running_time_s, self.optimal, self.NAME)
         return solution
