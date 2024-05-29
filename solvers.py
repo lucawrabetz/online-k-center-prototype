@@ -366,7 +366,9 @@ class OnlineCVCTAlgorithm(IFLSolver):
     def solve(self, instance: FLOfflineInstance) -> FLSolution:
         start = time.time()
         while self.state.t_index <= self.T:
+            it_start = time.time()
             self.single_iteration()
+            _LOGGER.log_body(f"Iteration time (ms): {(time.time() - it_start) * 1000}")
         self.running_time_s = time.time() - start
         self.optimal = False
         solution = FLSolution()
