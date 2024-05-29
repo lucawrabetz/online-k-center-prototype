@@ -6,3 +6,5 @@
 ```bash
 python main.py
 ```
+
+2. Follow further prompts for instance inputs.
