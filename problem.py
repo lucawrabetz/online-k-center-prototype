@@ -132,6 +132,9 @@ class FLOfflineInstance(Data):
         for t in range(self.shape.T + 1):
             self.points[t].print()
 
+    def print_distance_matrix(self) -> None:
+        _LOGGER.log_matrix(self.distances, "Distance")
+
 
 class CVCTState(Data):
     """
@@ -253,16 +256,34 @@ class CVCTState(Data):
             )
 
     def bare_final_state(
-        self, facilities_service_costs: Tuple[List[int], List[float]]
+        self,
+        instance: FLOfflineInstance,
+        facilities_service_costs: Tuple[List[int], List[float]],
     ) -> None:
         """
-        Set final state without any additional processing.
+        TODO: this stinks of decouple MILP model state from the CVTCA state.
+        Set final state.
+        Note: facilities_service_costs[0], the facility list, could be a list where:
+            - the list is of size T+1, -1 indicates no facility was built at that time, i > 0 indicates facility i was built.
+            - the list is just the facilities built, in no particular order (from a static problem)
+        All logic in this function works for both options, as we just use the facility list to count the number of facilities built.
+        Please keep this invariant if you change the function.
         """
+        self.T = instance.shape.T
+        self.n = instance.shape.n
+        self.Gamma = instance.Gamma
+        self.t_index = 1
         self.facilities = facilities_service_costs[0]
         self.service_costs = facilities_service_costs[1]
+        self.distance_to_closest_facility = [
+            -1 if i > 0 else 0.0 for i in range(self.T + 1)
+        ]
         for x in self.facilities:
             if x != -1:
                 self.num_facilities += 1
+        while self.t_index < self.T + 1:
+            self.update_distances_new_point(instance)
+            self.t_index += 1
         self.t_index = self.T
         self._is_set = True
 
@@ -270,14 +291,15 @@ class CVCTState(Data):
         """
         Set final objective value.
         """
-        logging.debug("Final service costs:")
+        _LOGGER.log_debug("Computing final objective..")
+        _LOGGER.log_debug("Final service costs", ":")
         for t, service_cost in enumerate(self.service_costs):
-            logging.debug(f"t: {t}, service cost: {service_cost}")
-        logging.debug(f"Sum of service costs: {sum(self.service_costs)}")
+            _LOGGER.log_debug(f"t: {t}, service cost: {service_cost}")
+        _LOGGER.log_debug(f"Sum of service costs: {sum(self.service_costs)}")
         self.objective = self.Gamma * (self.num_facilities - 1) + sum(
             self.service_costs
         )
-        logging.debug(f"Objective: {self.objective}")
+        _LOGGER.log_debug(f"Objective: {self.objective}")
 
 
 class FLSolution(Data):
@@ -300,7 +322,7 @@ class FLSolution(Data):
         self.service_costs: List[float] = []
         self.solver: str = ""
 
-    def print(self, name: str = "Final") -> None:
+    def print(self, instance: FLOfflineInstance, name: str = "Final") -> None:
         _LOGGER.log_subheader(
             f" {name} Solution:  Objective: {self.objective:.2f}, Optimal: {self.optimal}, Running Time: {self.running_time_ms:.2f} ms"
         )
@@ -314,6 +336,7 @@ class FLSolution(Data):
             _LOGGER.log_body(
                 f"Built {self.num_facilities - 1} facilities (in addition to x_0): {self.facilities}"
             )
+        instance.print_distance_matrix()
         _LOGGER.log_body(
             f"Final service distances (closest distance to a facility, for all i): {self.distance_to_closest_facility}"
         )

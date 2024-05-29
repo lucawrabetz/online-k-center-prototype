@@ -2,6 +2,7 @@ import os
 import re
 import shutil
 import logging
+import numpy as np
 from util import append_date, DATETIME_FORMAT
 
 
@@ -23,7 +24,7 @@ def setup_logging():
 
     # Create a console handler
     console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.DEBUG)
+    console_handler.setLevel(logging.INFO)
 
     # Create a formatter for the console handler
     console_formatter = logging.Formatter(terminal_format)
@@ -35,6 +36,11 @@ def setup_logging():
 
 class InfoLogger:
     INFO_CHARLEN: int = 8
+    DEBUG_CHARLEN: int = 9
+    SPACE_INDENT: int = 4
+    FINAL_INDENT_CHARLEN: int = max(INFO_CHARLEN, DEBUG_CHARLEN) + SPACE_INDENT
+    INFO_INDENT: str = f"{' ' * (FINAL_INDENT_CHARLEN - INFO_CHARLEN)}-> "
+    DEBUG_INDENT: str = f"{' ' * (FINAL_INDENT_CHARLEN - DEBUG_CHARLEN)}>>>> "
 
     def __init__(self, logger=logging, special_char="-", precision=2):
         self.logger = logger
@@ -58,12 +64,36 @@ class InfoLogger:
         self.blank_line()
 
     def format_numbers_in_string(self, msg: str) -> str:
+        if type(msg) != str:
+            logging.warning(
+                f"Expected string in format_numbers_in_string, got {type(msg)}. Cannot guarantee proper formatting."
+            )
+            return msg
         pattern = re.compile(r"(\d+\.\d+)")
 
         def repl(match):
             return f"{float(match.group()):.{self.precision}f}"
 
         return pattern.sub(repl, msg)
+
+    def log_matrix(self, matrix: np.ndarray, name: str, index: int = 0):
+        """
+        Prints a 2D numpy ndarray in a readable format with specified decimal places.
+
+        Parameters:
+        matrix (np.ndarray): 2D numpy array to be printed.
+        decimal_places (int): Number of decimal places for formatting the numbers.
+        """
+        if not isinstance(matrix, np.ndarray):
+            raise ValueError("Input must be a numpy ndarray.")
+        if matrix.ndim != 2:
+            raise ValueError("Input array must be 2-dimensional.")
+        self.log_debug(f"{name} matrix", ":")
+        for row in matrix:
+            formatted_row = []
+            for x in row:
+                formatted_row.append(str(x))
+            self.log_debug(" ".join(formatted_row), "")
 
     def log_header(self, msg: str):
         msg = self.format_numbers_in_string(msg)
@@ -78,11 +108,15 @@ class InfoLogger:
 
     def log_body(self, msg: str):
         msg = self.format_numbers_in_string(msg)
-        logging.info(f"     -> {msg}.")
+        logging.info(f"{self.INFO_INDENT}{msg}.")
 
     def log_special(self, msg: str):
         msg = self.format_numbers_in_string(msg)
         logging.info(f"--> {msg}! <--")
+
+    def log_debug(self, msg: str, final_punc: str = "."):
+        msg = self.format_numbers_in_string(msg)
+        logging.debug(f"{self.DEBUG_INDENT}{msg}{final_punc}")
 
 
 _LOGGER = InfoLogger()

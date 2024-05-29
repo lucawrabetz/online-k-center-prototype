@@ -27,7 +27,7 @@ class IFLSolver(ABC):
         pass
 
     @abstractmethod
-    def solve(self) -> FLSolution:
+    def solve(self, instance: FLOfflineInstance) -> FLSolution:
         pass
 
 
@@ -174,7 +174,7 @@ class OfflineMIP(IFLSolver):
             facilities.append(facility)
         return (facilities, service_costs)
 
-    def solve(self) -> FLSolution:
+    def solve(self, instance: FLOfflineInstance) -> FLSolution:
         """Solve model."""
         start = time.time()
         self.model.optimize()
@@ -182,7 +182,7 @@ class OfflineMIP(IFLSolver):
         self.optimal = self.model.status == GRB.OPTIMAL
         solution = FLSolution()
         state = CVCTState()
-        state.bare_final_state(self.final_facilities_service_costs())
+        state.bare_final_state(instance, self.final_facilities_service_costs())
         solution.from_cvtca(state, self.running_time_s, self.optimal, self.NAME)
         return solution
 
@@ -241,10 +241,10 @@ class StaticMIP(IFLSolver):
         for i in range(1, self.T + 1):
             i_index = i - 1
             for j in range(1, self.T + 1):
-                logging.debug(
-                    f"Adding linkzy constraint for i = {i}, j = {j}. i_index = {i_index}."
-                )
-                logging.debug(f"y: {self.y}, z: {self.z}")
+                # logging.debug(
+                #     f"Adding linkzy constraint for i = {i}, j = {j}. i_index = {i_index}."
+                # )
+                # logging.debug(f"y: {self.y}, z: {self.z}")
                 self.model.addConstr(
                     self.z[i_index][j] <= self.y[j - 1],
                     name=f"C_linkzy_{i}_{j}",
@@ -298,7 +298,7 @@ class StaticMIP(IFLSolver):
 
         return (facilities, service_costs)
 
-    def solve(self) -> FLSolution:
+    def solve(self, instance: FLOfflineInstance) -> FLSolution:
         """Solve model."""
         start = time.time()
         self.model.optimize()
@@ -306,7 +306,7 @@ class StaticMIP(IFLSolver):
         self.optimal = self.model.status == GRB.OPTIMAL
         solution = FLSolution()
         state = CVCTState()
-        state.bare_final_state(self.final_facilities_service_costs())
+        state.bare_final_state(instance, self.final_facilities_service_costs())
         solution.from_cvtca(state, self.running_time_s, self.optimal, self.NAME)
         return solution
 
@@ -363,7 +363,7 @@ class OnlineCVCTAlgorithm(IFLSolver):
         else:
             self.no_facility_update(nobuild_service_cost)
 
-    def solve(self) -> FLSolution:
+    def solve(self, instance: FLOfflineInstance) -> FLSolution:
         start = time.time()
         while self.state.t_index <= self.T:
             self.single_iteration()

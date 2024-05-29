@@ -32,13 +32,13 @@ class InteractiveExperiment:
 
     def print(self) -> None:
         _LOGGER.separator_block()
-        for solver, sol in self.solver_to_solution.items():
-            sol.print(solver)
+        for solver_name, solution in self.solver_to_solution.items():
+            solution.print(self.instance, solver_name)
             _LOGGER.separator_block()
 
     def run(self) -> None:
         for solver in self.solvers:
-            sol = solver.solve()
+            sol = solver.solve(self.instance)
             self.solver_to_solution[solver.NAME] = sol
         self.print()
 
