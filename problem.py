@@ -211,7 +211,8 @@ class CVCTState(Data):
             self.facilities[self.t_index] = ell
             self.num_facilities += 1
             self.update_distances_new_facility(instance, ell)
-            self.cum_var_cost = self.service_cost(new_facility=True)
+            self.cum_var_cost = self.compute_service_cost(new_facility=True)
+            self.service_costs[self.t_index] = self.cum_var_cost
             self.t_index += 1
             logging.debug(
                 f"Facilities: {self.facilities}, distances: {self.distance_to_closest_facility}."
@@ -236,8 +237,9 @@ class CVCTState(Data):
                 f"Distances after update: {self.distance_to_closest_facility}"
             )
 
-    def service_cost(self, new_facility: bool = False) -> float:
+    def compute_service_cost(self, new_facility: bool = False) -> float:
         """
+        Compute service cost for current time period.
         The updated self.distance_to_closest_facility[self.t_index] encodes the correct current facility set.
             - if no facility has been built since the last distance update, self.service_costs[self.t_index - 1] is a lower bound.
             - if a new facility has been built we have to check the whole distance list as the new facility may have better served some point that was the previous max min.
@@ -268,9 +270,14 @@ class CVCTState(Data):
         """
         Set final objective value.
         """
+        logging.debug("Final service costs:")
+        for t, service_cost in enumerate(self.service_costs):
+            logging.debug(f"t: {t}, service cost: {service_cost}")
+        logging.debug(f"Sum of service costs: {sum(self.service_costs)}")
         self.objective = self.Gamma * (self.num_facilities - 1) + sum(
             self.service_costs
         )
+        logging.debug(f"Objective: {self.objective}")
 
 
 class FLSolution(Data):
@@ -307,7 +314,12 @@ class FLSolution(Data):
             _LOGGER.log_body(
                 f"Built {self.num_facilities - 1} facilities (in addition to x_0): {self.facilities}"
             )
-        _LOGGER.log_body(f"Final time period's service distances: {self.service_costs}")
+        _LOGGER.log_body(
+            f"Final service distances (closest distance to a facility, for all i): {self.distance_to_closest_facility}"
+        )
+        _LOGGER.log_body(
+            f"Time horizon service costs (max min cost, for all t): {self.service_costs}"
+        )
 
     def set_running_time(self, time: float) -> None:
         self.running_time_s = time

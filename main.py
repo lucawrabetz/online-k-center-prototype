@@ -1,5 +1,5 @@
 from typing import List, Dict
-from solvers import OfflineMIP, OnlineCVCTAlgorithm, IFLSolver
+from solvers import OfflineMIP, OnlineCVCTAlgorithm, StaticMIP, IFLSolver
 from problem import FLOfflineInstance, FLInstanceShape, FLSolution, INSTANCE_SHAPES
 from log_config import setup_logging, _LOGGER
 
@@ -21,7 +21,11 @@ class InteractiveExperiment:
         else:
             Gamma: float = float(Gamma_raw)
             self.instance.set_random(Gamma=Gamma)
-        self.solvers: List[IFLSolver] = [OfflineMIP(), OnlineCVCTAlgorithm()]
+        self.solvers: List[IFLSolver] = [
+            OfflineMIP(),
+            StaticMIP(),
+            OnlineCVCTAlgorithm(),
+        ]
         for solver in self.solvers:
             solver.configure_solver(self.instance)
         self.solver_to_solution: Dict[str, FLSolution] = {}

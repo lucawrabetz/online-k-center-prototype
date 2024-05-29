@@ -16,14 +16,14 @@ def setup_logging():
     file_format = "[%(asctime)s - %(name)s - %(levelname)s]: %(message)s"
     logging.basicConfig(
         filename=filepath,
-        level=logging.INFO,
+        level=logging.DEBUG,
         format=file_format,
         datefmt=DATETIME_FORMAT,
     )
 
     # Create a console handler
     console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
+    console_handler.setLevel(logging.DEBUG)
 
     # Create a formatter for the console handler
     console_formatter = logging.Formatter(terminal_format)
