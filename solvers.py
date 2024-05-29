@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from typing import List, Any, Tuple
 from gurobipy import Model, GRB, quicksum
 from problem import FLOfflineInstance, FLSolution, CVCTState
-from log_config import gurobi_log_file
+from log_config import gurobi_log_file, _LOGGER
 
 GRBVar = Any
 
@@ -226,11 +226,11 @@ class OnlineCVCTAlgorithm(IFLSolver):
         self.state.update(self.offline_instance, service_cost=service_cost)
 
     def single_iteration(self) -> None:
-        logging.info(f"Starting iteration at time {self.state.t_index}.")
+        _LOGGER.log_subheader(f"Starting iteration at time {self.state.t_index}")
         self.state.update(self.offline_instance)
         nobuild_service_cost = self.state.service_cost()
-        logging.info(
-            f"(cumVarCost: {self.state.cum_var_cost}) + (no build service cost: {nobuild_service_cost}) = {self.state.cum_var_cost + nobuild_service_cost}, gamma: {self.Gamma}."
+        _LOGGER.log_body(
+            f"(cumVarCost: {self.state.cum_var_cost}) + (no build service cost: {nobuild_service_cost}) = {self.state.cum_var_cost + nobuild_service_cost}, gamma: {self.Gamma}"
         )
         if self.state.cum_var_cost + nobuild_service_cost > self.Gamma:
             self.add_facility()

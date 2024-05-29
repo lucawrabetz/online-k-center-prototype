@@ -3,6 +3,7 @@ import logging
 import numpy as np
 from typing import Callable, List, Tuple
 from util import Data
+from log_config import _LOGGER
 
 
 class DPoint:
@@ -16,7 +17,7 @@ class DPoint:
 
     def print(self) -> None:
         with np.printoptions(precision=4, suppress=True):
-            logging.info(self.x)
+            _LOGGER.log_body(self.x)
 
 
 class FLInstanceShape:
@@ -29,8 +30,8 @@ class FLInstanceShape:
         self.T: int = T
 
     def print(self) -> None:
-        logging.info(f"n: {self.n}")
-        logging.info(f"T: {self.T}")
+        _LOGGER.log_body(f"n: {self.n}")
+        _LOGGER.log_body(f"T: {self.T}")
 
 
 INSTANCE_SHAPES = {
@@ -127,7 +128,7 @@ class FLOfflineInstance(Data):
         self.set_distance_matrix()
 
     def print(self) -> None:
-        logging.info(f"n: {self.shape.n}, T: {self.shape.T}, Gamma: {self.Gamma}.")
+        _LOGGER.log_body(f"n: {self.shape.n}, T: {self.shape.T}, Gamma: {self.Gamma}")
         for t in range(self.shape.T + 1):
             self.points[t].print()
 
@@ -204,8 +205,8 @@ class CVCTState(Data):
         if ell and service_cost:
             raise ValueError("ell and service_cost cannot be set at the same time.")
         elif ell:
-            logging.info(
-                f"***** Updating state at time {self.t_index}, to add facility {ell}: {instance.points[ell].x} *****"
+            _LOGGER.log_special(
+                f"Updating state at time {self.t_index}, to add facility {ell}: {instance.points[ell].x}"
             )
             self.facilities[self.t_index] = ell
             self.num_facilities += 1
@@ -231,8 +232,8 @@ class CVCTState(Data):
                 f"Updating state at time {self.t_index} to add demand point {self.t_index}: {instance.points[self.t_index].x}."
             )
             self.update_distances_new_point(instance)
-            logging.info(
-                f"Distances after update: {self.distance_to_closest_facility}."
+            _LOGGER.log_body(
+                f"Distances after update: {self.distance_to_closest_facility}"
             )
 
     def service_cost(self, new_facility: bool = False) -> float:
@@ -293,14 +294,20 @@ class FLSolution(Data):
         self.solver: str = ""
 
     def print(self, name: str = "Final") -> None:
-        logging.info(
-            f" *** {name} Solution:  Objective: {self.objective:.2f}, Optimal: {self.optimal}, Running Time: {self.running_time_ms:.2f} ms *** "
+        _LOGGER.log_subheader(
+            f" {name} Solution:  Objective: {self.objective:.2f}, Optimal: {self.optimal}, Running Time: {self.running_time_ms:.2f} ms"
         )
-        logging.info(
-            f"Built {self.num_facilities - 1} facilities (in addition to x_0): {self.facilities}"
-        )
-        logging.info(f"Final time period's service distances: {self.service_costs}")
-        logging.info(f" *** *** *** *** *** *** *** *** *** *** *** *** ")
+        if self.num_facilities == 1:
+            _LOGGER.log_body("Built no additional facilities")
+        elif self.num_facilities == 2:
+            _LOGGER.log_body(
+                f"Built 1 facility (in addition to x_0): {self.facilities}"
+            )
+        else:
+            _LOGGER.log_body(
+                f"Built {self.num_facilities - 1} facilities (in addition to x_0): {self.facilities}"
+            )
+        _LOGGER.log_body(f"Final time period's service distances: {self.service_costs}")
 
     def set_running_time(self, time: float) -> None:
         self.running_time_s = time
