@@ -8,18 +8,18 @@ from gurobipy import Model, GRB, quicksum
 from problem import FLOfflineInstance, FLSolution, CVCTState
 from log_config import gurobi_log_file, _LOGGER
 from util import append_date
+from allowed_types import FLSolverType, _OffMIP, _StMIP, _CVCTA
 
 GRBVar = Any
 
 
 class IFLSolver(ABC):
-    NAME: str
-
-    def __init__(self) -> None:
+    def __init__(self, solver_id: FLSolverType) -> None:
         self.T: int = 0
         self.objective: float = 0.0
         self.running_time_s: float = 0.0
         self.optimal: bool = False
+        self.id: FLSolverType = solver_id
         pass
 
     @abstractmethod
@@ -32,11 +32,9 @@ class IFLSolver(ABC):
 
 
 class OfflineMIP(IFLSolver):
-    NAME = "OffMIP"
-
     def __init__(self) -> None:
         """Constructs blank gurobi model."""
-        super().__init__()
+        super().__init__(_OffMIP)
         self.model: Model = Model("OfflineMIP")
         self.model.setParam("LogToConsole", 0)
         self.model.setParam("LogFile", gurobi_log_file())
@@ -183,7 +181,7 @@ class OfflineMIP(IFLSolver):
         solution = FLSolution()
         state = CVCTState()
         state.bare_final_state(instance, self.final_facilities_service_costs())
-        solution.from_cvtca(state, self.running_time_s, self.optimal, self.NAME)
+        solution.from_cvtca(state, self.running_time_s, self.optimal, self.id.name)
         return solution
 
     def write_model(self, filename: str = "OfflineMIP.lp") -> None:
@@ -192,11 +190,9 @@ class OfflineMIP(IFLSolver):
 
 
 class StaticMIP(IFLSolver):
-    NAME = "StMIP"
-
     def __init__(self) -> None:
         """Constructs blank gurobi model."""
-        super().__init__()
+        super().__init__(_StMIP)
         self.model: Model = Model("StaticMIP")
         self.model.setParam("LogToConsole", 0)
         self.model.setParam("LogFile", gurobi_log_file())
@@ -307,19 +303,18 @@ class StaticMIP(IFLSolver):
         solution = FLSolution()
         state = CVCTState()
         state.bare_final_state(instance, self.final_facilities_service_costs())
-        solution.from_cvtca(state, self.running_time_s, self.optimal, self.NAME)
+        solution.from_cvtca(state, self.running_time_s, self.optimal, self.id.name)
         return solution
 
     def write_model(self) -> None:
         """Write model to file."""
-        filename = append_date(self.NAME) + ".lp"
+        filename = append_date(self.id.name) + ".lp"
         self.model.write(filename)
 
 
 class OnlineCVCTAlgorithm(IFLSolver):
-    NAME = "CVTCA"
-
     def __init__(self) -> None:
+        super().__init__(_CVCTA)
         self.offline_instance: FLOfflineInstance = FLOfflineInstance()
         self.T: int = 0
         self.Gamma: float = 0.0
@@ -372,5 +367,5 @@ class OnlineCVCTAlgorithm(IFLSolver):
         self.running_time_s = time.time() - start
         self.optimal = False
         solution = FLSolution()
-        solution.from_cvtca(self.state, self.running_time_s, self.optimal, self.NAME)
+        solution.from_cvtca(self.state, self.running_time_s, self.optimal, self.id.name)
         return solution

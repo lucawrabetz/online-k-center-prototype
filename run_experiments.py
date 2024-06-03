@@ -1,11 +1,11 @@
 from experiments import FLExperiment
+from allowed_types import _SOLVERS
 
 
 def main():
     instances = []
-    solvers = []
     experiment = FLExperiment()
-    experiment.configure_experiment(instances, solvers)
+    experiment.configure_experiment(instances, _SOLVERS)
     experiment.run()
 
 

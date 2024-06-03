@@ -39,7 +39,7 @@ class InteractiveExperiment:
     def run(self) -> None:
         for solver in self.solvers:
             sol = solver.solve(self.instance)
-            self.solver_to_solution[solver.NAME] = sol
+            self.solver_to_solution[solver.id.name] = sol
         self.print()
 
 
