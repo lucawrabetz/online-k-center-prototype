@@ -1,7 +1,8 @@
 from typing import List, Dict
 from solvers import OfflineMIP, OnlineCVCTAlgorithm, StaticMIP, IFLSolver
-from problem import FLOfflineInstance, FLInstanceShape, FLSolution, INSTANCE_SHAPES
+from problem import FLOfflineInstance, FLSolution
 from log_config import setup_logging, _LOGGER
+from allowed_types import FLInstanceType, _INSTANCE_SHAPES
 
 setup_logging()
 import logging
@@ -11,7 +12,7 @@ class InteractiveExperiment:
     def __init__(self) -> None:
         T: int = int(input("Enter T: "))
         n: int = int(input("Enter n: "))
-        self.shape: FLInstanceShape = FLInstanceShape(n=n, T=T)
+        self.shape: FLInstanceType = FLInstanceType(n=n, T=T)
         self.instance: FLOfflineInstance = FLOfflineInstance(self.shape)
         Gamma_raw: str = input("Enter Gamma (r to generate randomly): ")
         if Gamma_raw == "r":
@@ -47,7 +48,7 @@ def main():
     exp = InteractiveExperiment()
     exp.run()
     # logging.info("Started")
-    # instance = FLOfflineInstance(INSTANCE_SHAPES["small"])
+    # instance = FLOfflineInstance(_INSTANCE_SHAPES["small"])
     # instance.set_random()
     # instance.print()
     # mip = OfflineMIP()

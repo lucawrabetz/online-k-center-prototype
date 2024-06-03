@@ -4,6 +4,7 @@ import numpy as np
 from typing import Callable, List, Tuple
 from util import Data
 from log_config import _LOGGER
+from allowed_types import FLInstanceType, _INSTANCE_SHAPES
 
 
 class DPoint:
@@ -20,34 +21,13 @@ class DPoint:
             _LOGGER.log_body(self.x)
 
 
-class FLInstanceShape:
-    """
-    Class to hold define instance shapes. Doesn't have any setup methods, so doesn't inherit Data.
-    """
-
-    def __init__(self, n: int = 2, T: int = 3) -> None:
-        self.n: int = n
-        self.T: int = T
-
-    def print(self) -> None:
-        _LOGGER.log_body(f"n: {self.n}")
-        _LOGGER.log_body(f"T: {self.T}")
-
-
-INSTANCE_SHAPES = {
-    "test": FLInstanceShape(),
-    "small": FLInstanceShape(10),
-    "blank": FLInstanceShape(0, 0),
-}
-
-
 class FLDistribution:
     """
     Class to hold "distributions" for generating demand points for FLOfflineInstances.
     """
 
-    def __init__(self, shape: FLInstanceShape) -> None:
-        self.shape: FLInstanceShape = shape
+    def __init__(self, shape: FLInstanceType) -> None:
+        self.shape: FLInstanceType = shape
         self.rng: np.random.Generator = np.random.default_rng()
 
     def gamma_interval(self, low: int, high: int) -> float:
@@ -76,22 +56,22 @@ class FLOfflineInstance(Data):
     Class to hold offline instance data for the online min max center problem.
     """
 
-    def __init__(self, shape: FLInstanceShape = INSTANCE_SHAPES["blank"]) -> None:
+    def __init__(self, instance_id: FLInstanceType = _INSTANCE_SHAPES["blank"]) -> None:
         super().__init__()
-        self.shape: FLInstanceShape = shape
+        self.id: FLInstanceType = instance_id
         self.points: List[DPoint] = [
-            DPoint(np.zeros(self.shape.n)) for _ in range(self.shape.T + 1)
+            DPoint(np.zeros(self.id.n)) for _ in range(self.id.T + 1)
         ]
         self.Gamma: float = 0.0
-        self.distances: np.ndarray = np.zeros((self.shape.T + 1, self.shape.T + 1))
+        self.distances: np.ndarray = np.zeros((self.id.T + 1, self.id.T + 1))
         self.distance: Callable[[DPoint, DPoint], float] = euclidean_distance
 
     def set_distance_matrix(self) -> None:
         """
         Set distance matrix based on demand points.
         """
-        for i in range(self.shape.T):
-            for j in range(i + 1, self.shape.T + 1):
+        for i in range(self.id.T):
+            for j in range(i + 1, self.id.T + 1):
                 if i == j:
                     self.distances[i][j] = 0.0
                 else:
@@ -109,7 +89,7 @@ class FLOfflineInstance(Data):
         Set demand points by instantiating and calling on an FLDistribution object.
         Update distance matrix.
         """
-        dist = FLDistribution(self.shape)
+        dist = FLDistribution(self.id)
         if Gamma:
             self.Gamma = Gamma
         else:
@@ -128,8 +108,8 @@ class FLOfflineInstance(Data):
         self.set_distance_matrix()
 
     def print(self) -> None:
-        _LOGGER.log_body(f"n: {self.shape.n}, T: {self.shape.T}, Gamma: {self.Gamma}")
-        for t in range(self.shape.T + 1):
+        _LOGGER.log_body(f"n: {self.id.n}, T: {self.id.T}, Gamma: {self.Gamma}")
+        for t in range(self.id.T + 1):
             self.points[t].print()
 
     def print_distance_matrix(self) -> None:
@@ -160,8 +140,8 @@ class CVCTState(Data):
         """
         if not instance.is_set:
             raise ValueError("Instance must be set before configuring state.")
-        self.T = instance.shape.T
-        self.n = instance.shape.n
+        self.T = instance.id.T
+        self.n = instance.id.n
         self.Gamma = instance.Gamma
         self.num_facilities = 1
         self.t_index = 1
@@ -269,8 +249,8 @@ class CVCTState(Data):
         All logic in this function works for both options, as we just use the facility list to count the number of facilities built.
         Please keep this invariant if you change the function.
         """
-        self.T = instance.shape.T
-        self.n = instance.shape.n
+        self.T = instance.id.T
+        self.n = instance.id.n
         self.Gamma = instance.Gamma
         self.t_index = 1
         self.facilities = facilities_service_costs[0]

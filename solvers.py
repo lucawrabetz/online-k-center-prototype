@@ -140,7 +140,7 @@ class OfflineMIP(IFLSolver):
         """
         if not instance.is_set:
             raise ValueError("Instance must be set before configuring solver.")
-        self.T = instance.shape.T
+        self.T = instance.id.T
         self.add_variables(instance)
         self.add_zetalowerbound_constraints(instance)
         self.add_linkzy_constraints(instance)
@@ -270,7 +270,7 @@ class StaticMIP(IFLSolver):
         """
         if not instance.is_set:
             raise ValueError("Instance must be set before configuring solver.")
-        self.T = instance.shape.T
+        self.T = instance.id.T
         self.add_variables(instance)
         self.add_zetalowerbound_constraints(instance)
         self.add_linkzy_constraints(instance)
@@ -325,7 +325,7 @@ class OnlineCVCTAlgorithm(IFLSolver):
         if not instance.is_set:
             raise ValueError("Instance must be set before configuring solver.")
         self.offline_instance = instance
-        self.T = instance.shape.T
+        self.T = instance.id.T
         self.Gamma = instance.Gamma
         self.state.configure_state(instance)
 

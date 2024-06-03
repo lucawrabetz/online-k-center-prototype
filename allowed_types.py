@@ -39,3 +39,8 @@ _OffMIP = FLSolverType("OffMIP")
 _StMIP = FLSolverType("StMIP")
 _CVCTA = FLSolverType("CVCTA")
 _SOLVERS = [_OffMIP, _StMIP, _CVCTA]
+_INSTANCE_SHAPES = {
+    "test": FLInstanceType(),
+    "small": FLInstanceType(10),
+    "blank": FLInstanceType(0, 0),
+}
