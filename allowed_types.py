@@ -35,6 +35,9 @@ class FLInstanceType:
         # Unique identifier if all instance parameters already exist in another instance, only set for saved instances.
         self.id: int = -1
 
+    def set_id(self, id: int) -> None:
+        self.id = id
+
     def from_filename(self, filename: str) -> None:
         split = filename.split("_")
         if len(split) != 4:
@@ -54,8 +57,7 @@ class FLInstanceType:
             raise ValueError("Instance has no id so is not saved.")
 
     def print(self) -> None:
-        _LOGGER.log_body(f"n: {self.n}")
-        _LOGGER.log_body(f"T: {self.T}")
+        _LOGGER.log_body(f"n: {self.n}, T: {self.T}")
 
 
 _TEST_SHAPE = FLInstanceType()

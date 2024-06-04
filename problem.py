@@ -26,8 +26,8 @@ class FLDistribution:
     Class to hold "distributions" for generating demand points for FLOfflineInstances.
     """
 
-    def __init__(self, shape: FLInstanceType) -> None:
-        self.shape: FLInstanceType = shape
+    def __init__(self, instance_id: FLInstanceType) -> None:
+        self.id: FLInstanceType = instance_id
         self.rng: np.random.Generator = np.random.default_rng()
 
     def gamma_interval(self, low: int, high: int) -> float:
@@ -40,9 +40,7 @@ class FLDistribution:
         """
         Generate points uniformly at random from the unit square of dimension n.
         """
-        return [
-            DPoint(self.rng.random((self.shape.n,))) for _ in range(self.shape.T + 1)
-        ]
+        return [DPoint(self.rng.random((self.id.n,))) for _ in range(self.id.T + 1)]
 
 
 ### distance functions - metric for instances
@@ -134,6 +132,24 @@ class FLOfflineInstance(Data):
 
     def print_distance_matrix(self) -> None:
         _LOGGER.log_matrix(self.distances, "Distance")
+
+    def write_to_csv(self) -> None:
+        """
+        Write instance to csv file.
+        Line 1: Gamma
+        Line 2: x_0^1, x_0^2, ..., x_0^n
+        Line 3: x_1^1, x_1^2, ..., x_1^n
+        ...
+        Line T+1: x_T^1, x_T^2, ..., x_T^n
+        """
+        if self.id.id == -1:
+            raise ValueError("Instance has no id, cannot construct filename.")
+        filepath = self.id.file_path()
+        with open(filepath, "w", newline="") as file:
+            writer = csv.writer(file)
+            writer.writerow([self.Gamma])
+            for point in self.points:
+                writer.writerow(point.x)
 
 
 class CVCTState(Data):
