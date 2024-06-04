@@ -18,7 +18,7 @@ class DPoint:
 
     def print(self) -> None:
         with np.printoptions(precision=4, suppress=True):
-            _LOGGER.log_body(self.x)
+            _LOGGER.log_bodydebug(self.x)
 
 
 class FLDistribution:
@@ -126,7 +126,7 @@ class FLOfflineInstance(Data):
         self._is_set = True
 
     def print(self) -> None:
-        _LOGGER.log_body(f"n: {self.id.n}, T: {self.id.T}, Gamma: {self.Gamma}")
+        _LOGGER.log_bodydebug(f"n: {self.id.n}, T: {self.id.T}, Gamma: {self.Gamma}")
         for t in range(self.id.T + 1):
             self.points[t].print()
 
@@ -224,7 +224,7 @@ class CVCTState(Data):
         if ell and service_cost:
             raise ValueError("ell and service_cost cannot be set at the same time.")
         elif ell:
-            _LOGGER.log_special(
+            _LOGGER.log_bodydebug(
                 f"Updating state at time {self.t_index}, to add facility {ell}: {instance.points[ell].x}"
             )
             self.facilities[self.t_index] = ell
@@ -252,7 +252,7 @@ class CVCTState(Data):
                 f"Updating state at time {self.t_index} to add demand point {self.t_index}: {instance.points[self.t_index].x}."
             )
             self.update_distances_new_point(instance)
-            _LOGGER.log_body(
+            _LOGGER.log_bodydebug(
                 f"Distances after update: {self.distance_to_closest_facility}"
             )
 
@@ -344,20 +344,20 @@ class FLSolution(Data):
             f" {name} Solution:  Objective: {self.objective:.2f}, Optimal: {self.optimal}, Running Time: {self.running_time_ms:.2f} ms"
         )
         if self.num_facilities == 1:
-            _LOGGER.log_body("Built no additional facilities")
+            _LOGGER.log_bodydebug("Built no additional facilities")
         elif self.num_facilities == 2:
-            _LOGGER.log_body(
+            _LOGGER.log_bodydebug(
                 f"Built 1 facility (in addition to x_0): {self.facilities}"
             )
         else:
-            _LOGGER.log_body(
+            _LOGGER.log_bodydebug(
                 f"Built {self.num_facilities - 1} facilities (in addition to x_0): {self.facilities}"
             )
         instance.print_distance_matrix()
-        _LOGGER.log_body(
+        _LOGGER.log_bodydebug(
             f"Final service distances (closest distance to a facility, for all i): {self.distance_to_closest_facility}"
         )
-        _LOGGER.log_body(
+        _LOGGER.log_bodydebug(
             f"Time horizon service costs (max min cost, for all t): {self.service_costs}"
         )
 

@@ -348,10 +348,10 @@ class OnlineCVCTAlgorithm(IFLSolver):
         self.state.update(self.offline_instance, service_cost=service_cost)
 
     def single_iteration(self) -> None:
-        _LOGGER.log_subheader(f"Starting iteration at time {self.state.t_index}")
+        _LOGGER.log_bodydebug(f"Starting iteration at time {self.state.t_index}")
         self.state.update(self.offline_instance)
         nobuild_service_cost = self.state.compute_service_cost()
-        _LOGGER.log_body(
+        _LOGGER.log_bodydebug(
             f"(cumVarCost: {self.state.cum_var_cost}) + (no build service cost: {nobuild_service_cost}) = {self.state.cum_var_cost + nobuild_service_cost}, gamma: {self.Gamma}"
         )
         if self.state.cum_var_cost + nobuild_service_cost > self.Gamma:
@@ -366,7 +366,9 @@ class OnlineCVCTAlgorithm(IFLSolver):
         while self.state.t_index <= self.T:
             it_start = time.time()
             self.single_iteration()
-            _LOGGER.log_body(f"Iteration time (ms): {(time.time() - it_start) * 1000}")
+            _LOGGER.log_bodydebug(
+                f"Iteration time (ms): {(time.time() - it_start) * 1000}"
+            )
         self.running_time_s = time.time() - start
         self.optimal = False
         solution = FLSolution()

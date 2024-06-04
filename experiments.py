@@ -7,7 +7,7 @@ from allowed_types import _StMIP, _OffMIP, _CVCTA
 from problem import FLOfflineInstance, FLSolution
 from solvers import OfflineMIP, OnlineCVCTAlgorithm, StaticMIP, _SOLVER_FACTORY
 from solvers import IFLSolver
-from data_model import _DATA_MODEL
+from data_model import _DATA_MODEL, OBJECTIVE, TIME
 from feature_interface import IFeature
 from log_config import _LOGGER
 from util import _DAT
@@ -87,19 +87,32 @@ class FLRuns:
         self.instance_id: FLInstanceType = instance_id
         self.solver_ids: List[FLSolverType] = solver_ids
 
+    def single_run(
+        self, solver_id: FLSolverType, instance: FLOfflineInstance
+    ) -> OutputRow:
+        solver = _SOLVER_FACTORY.solver(solver_id)
+        solver.configure_solver(instance)
+        solution: FLSolution = solver.solve(instance)
+        row = OutputRow()
+        row.from_run(instance, solver, solution)
+        return row
+
     def run(self) -> OutputTable:
         instance = FLOfflineInstance(self.instance_id)
         instance.read()
         table = OutputTable()
+        _LOGGER.log_body(
+            f"Running solvers {', '.join([s.name for s in self.solver_ids])} on instance {self.instance_id.file_path()}"
+        )
+        summary: List[str] = []
         for solver_id in self.solver_ids:
-            solver = _SOLVER_FACTORY.solver(solver_id)
-            _LOGGER.log_body(f"We running {solver_id.name}")
-            solver.configure_solver(instance)
-            # debugging after uncommenting next line
-            solution: FLSolution = solver.solve(instance)
-            row = OutputRow()
-            # row.from_run(instance, solver, solution)
+            row = self.single_run(solver_id, instance)
             table.add_row(row)
+            summary.append(
+                f"{solver_id.name}: {row.row[OBJECTIVE]}, time (ms): {row.row[TIME]}"
+            )
+        _LOGGER.log_body("; ".join(summary))
+        _LOGGER.separator_line()
         return table
 
 
