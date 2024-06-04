@@ -97,7 +97,7 @@ class InfoLogger:
     def log_header(self, msg: str):
         self.separator_block()
         msg = self.format_numbers_in_string(msg)
-        logging.info(msg)
+        logging.info(f"{msg}.")
         self.separator_block()
         self.blank_line()
 
