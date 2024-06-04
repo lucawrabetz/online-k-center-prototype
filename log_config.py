@@ -105,6 +105,10 @@ class InfoLogger:
         msg = self.format_numbers_in_string(msg)
         logging.info(f"{msg}.")
 
+    def log_bodydebug(self, msg: str):
+        msg = self.format_numbers_in_string(msg)
+        logging.debug(f"{self.INFO_INDENT}{msg}.")
+
     def log_body(self, msg: str):
         msg = self.format_numbers_in_string(msg)
         logging.info(f"{self.INFO_INDENT}{msg}.")
