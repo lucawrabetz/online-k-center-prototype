@@ -3,12 +3,12 @@ import time
 import numpy as np
 import logging
 from abc import ABC, abstractmethod
-from typing import List, Any, Tuple
+from typing import List, Any, Tuple, Dict
 from gurobipy import Model, GRB, quicksum
 from problem import FLOfflineInstance, FLSolution, CVCTState
 from log_config import gurobi_log_file, _LOGGER
 from util import append_date
-from allowed_types import FLSolverType, _OffMIP, _StMIP, _CVCTA
+from allowed_types import FLSolverType, _OffMIP, _StMIP, _CVCTA, _SOLVERS
 
 GRBVar = Any
 
@@ -35,6 +35,8 @@ class OfflineMIP(IFLSolver):
     def __init__(self) -> None:
         """Constructs blank gurobi model."""
         super().__init__(_OffMIP)
+
+    def init_mip(self) -> None:
         self.model: Model = Model("OfflineMIP")
         self.model.setParam("LogToConsole", 0)
         self.model.setParam("LogFile", gurobi_log_file())
@@ -141,6 +143,7 @@ class OfflineMIP(IFLSolver):
         if not instance.is_set:
             raise ValueError("Instance must be set before configuring solver.")
         self.T = instance.id.T
+        self.init_mip()
         self.add_variables(instance)
         self.add_zetalowerbound_constraints(instance)
         self.add_linkzy_constraints(instance)
@@ -191,8 +194,9 @@ class OfflineMIP(IFLSolver):
 
 class StaticMIP(IFLSolver):
     def __init__(self) -> None:
-        """Constructs blank gurobi model."""
         super().__init__(_StMIP)
+
+    def init_mip(self) -> None:
         self.model: Model = Model("StaticMIP")
         self.model.setParam("LogToConsole", 0)
         self.model.setParam("LogFile", gurobi_log_file())
@@ -270,6 +274,7 @@ class StaticMIP(IFLSolver):
         """
         if not instance.is_set:
             raise ValueError("Instance must be set before configuring solver.")
+        self.init_mip()
         self.T = instance.id.T
         self.add_variables(instance)
         self.add_zetalowerbound_constraints(instance)
@@ -315,15 +320,11 @@ class StaticMIP(IFLSolver):
 class OnlineCVCTAlgorithm(IFLSolver):
     def __init__(self) -> None:
         super().__init__(_CVCTA)
-        self.offline_instance: FLOfflineInstance = FLOfflineInstance()
-        self.T: int = 0
-        self.Gamma: float = 0.0
-        self.cum_var_cost: float = 0.0
-        self.state: CVCTState = CVCTState()
 
     def configure_solver(self, instance: FLOfflineInstance) -> None:
         if not instance.is_set:
             raise ValueError("Instance must be set before configuring solver.")
+        self.state: CVCTState = CVCTState()
         self.offline_instance = instance
         self.T = instance.id.T
         self.Gamma = instance.Gamma
@@ -359,6 +360,8 @@ class OnlineCVCTAlgorithm(IFLSolver):
             self.no_facility_update(nobuild_service_cost)
 
     def solve(self, instance: FLOfflineInstance) -> FLSolution:
+        if not self.state.is_set:
+            raise ValueError("Solver must be configured before solving.")
         start = time.time()
         while self.state.t_index <= self.T:
             it_start = time.time()
@@ -369,3 +372,20 @@ class OnlineCVCTAlgorithm(IFLSolver):
         solution = FLSolution()
         solution.from_cvtca(self.state, self.running_time_s, self.optimal, self.id.name)
         return solution
+
+
+class SolverTypeRegistry:
+    def __init__(self, registry: Dict[FLSolverType, Any] = {}) -> None:
+        self.solver_registry = registry
+
+    def solver(self, solver_id: FLSolverType) -> IFLSolver:
+        return self.solver_registry[solver_id]()
+
+
+_SOLVER_FACTORY = SolverTypeRegistry(
+    {
+        _StMIP: StaticMIP,
+        _OffMIP: OfflineMIP,
+        _CVCTA: OnlineCVCTAlgorithm,
+    }
+)
