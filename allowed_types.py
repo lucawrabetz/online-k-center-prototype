@@ -66,5 +66,5 @@ _CVCTA = FLSolverType("CVCTA")
 _SOLVERS: List[Any] = [_OffMIP, _StMIP, _CVCTA]
 
 _BUILT_IN_TYPES: List[Any] = [str, int, float, bool]
-_ALLOWED_TYPES: List[Any] = _SOLVERS
+_ALLOWED_TYPES: List[Any] = _SOLVERS.copy()
 _ALLOWED_TYPES.extend(_BUILT_IN_TYPES)
