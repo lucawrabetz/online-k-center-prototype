@@ -12,6 +12,8 @@ class Data:
 
 DATE_FORMAT = "%m_%d_%y"
 DATETIME_FORMAT = "%Y-%m-%d--%H:%M:%S"
+# Directory paths
+_DAT = "dat"
 
 
 def append_date(base: str, time: bool = True) -> str:

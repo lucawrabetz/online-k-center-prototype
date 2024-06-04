@@ -2,7 +2,7 @@ from typing import List, Dict
 from solvers import OfflineMIP, OnlineCVCTAlgorithm, StaticMIP, IFLSolver
 from problem import FLOfflineInstance, FLSolution
 from log_config import setup_logging, _LOGGER
-from allowed_types import FLInstanceType, _INSTANCE_SHAPES
+from allowed_types import FLInstanceType
 
 setup_logging()
 import logging
@@ -47,21 +47,6 @@ class InteractiveExperiment:
 def main():
     exp = InteractiveExperiment()
     exp.run()
-    # logging.info("Started")
-    # instance = FLOfflineInstance(_INSTANCE_SHAPES["small"])
-    # instance.set_random()
-    # instance.print()
-    # mip = OfflineMIP()
-    # mip.configure_solver(instance)
-    # logging.info("SOLVING OFFLINE MIP...")
-    # mip_solution = mip.solve()
-    # logging.info("SOLVING ONLINE CVTCA...")
-    # algo = OnlineCVCTAlgorithm()
-    # algo.configure_solver(instance)
-    # algo_solution = algo.solve()
-    # mip_solution.print("MIP")
-    # algo_solution.print("CVTCA")
-    # logging.info("Finished")
 
 
 if __name__ == "__main__":

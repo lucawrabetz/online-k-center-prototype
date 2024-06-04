@@ -24,7 +24,7 @@ def setup_logging():
 
     # Create a console handler
     console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
+    console_handler.setLevel(logging.DEBUG)
 
     # Create a formatter for the console handler
     console_formatter = logging.Formatter(terminal_format)
@@ -59,9 +59,8 @@ class InfoLogger:
         print(separator_line)
 
     def separator_block(self):
-        self.blank_line()
         self.separator_line()
-        self.blank_line()
+        self.separator_line()
 
     def format_numbers_in_string(self, msg: str) -> str:
         if type(msg) != str:
@@ -96,11 +95,11 @@ class InfoLogger:
             self.log_debug(" ".join(formatted_row), "")
 
     def log_header(self, msg: str):
+        self.separator_block()
         msg = self.format_numbers_in_string(msg)
-        sep: str = self.special_char * (len(msg) + self.INFO_CHARLEN)
-        print(sep)
         logging.info(msg)
-        print(sep)
+        self.separator_block()
+        self.blank_line()
 
     def log_subheader(self, msg: str):
         msg = self.format_numbers_in_string(msg)

@@ -1,10 +1,10 @@
-import sys
+import csv, os, sys
 import logging
 import numpy as np
 from typing import Callable, List, Tuple
-from util import Data
+from util import Data, _DAT
 from log_config import _LOGGER
-from allowed_types import FLInstanceType, _INSTANCE_SHAPES
+from allowed_types import FLInstanceType, _TEST_SHAPE
 
 
 class DPoint:
@@ -56,7 +56,7 @@ class FLOfflineInstance(Data):
     Class to hold offline instance data for the online min max center problem.
     """
 
-    def __init__(self, instance_id: FLInstanceType = _INSTANCE_SHAPES["blank"]) -> None:
+    def __init__(self, instance_id: FLInstanceType = _TEST_SHAPE) -> None:
         super().__init__()
         self.id: FLInstanceType = instance_id
         self.points: List[DPoint] = [
@@ -98,14 +98,34 @@ class FLOfflineInstance(Data):
         self.set_distance_matrix()
         self._is_set = True
 
-    def read_from_file(self, filename: str) -> None:
+    def read_csv_file(self, file_path: str) -> Tuple[float, List[np.ndarray]]:
+        with open(file_path, "r") as file:
+            reader = csv.reader(file)
+            gamma = float(next(reader)[0])
+            arrays = []
+            for row in reader:
+                array = np.array(row, dtype=float)
+                arrays.append(array)
+
+        return gamma, arrays
+
+    def read(self) -> None:
         """
-        Read demand points from file.
+        Read demand points from file if it exists in instance id.
         Update distance matrix.
         """
-        pass
-        self._is_set = True
+        if self.id.id == -1:
+            raise ValueError("Instance has no id, cannot construct filename.")
+        filepath = self.id.file_path()
+        if not os.path.exists(filepath):
+            raise ValueError(f"File {filepath} does not exist.")
+        if not filepath.endswith(".csv"):
+            raise ValueError(f"File {filepath} is not a csv.")
+        instance_data: Tuple[float, List[np.ndarray]] = self.read_csv_file(filepath)
+        self.Gamma = instance_data[0]
+        self.points = [DPoint(point) for point in instance_data[1]]
         self.set_distance_matrix()
+        self._is_set = True
 
     def print(self) -> None:
         _LOGGER.log_body(f"n: {self.id.n}, T: {self.id.T}, Gamma: {self.Gamma}")
@@ -296,6 +316,7 @@ class FLSolution(Data):
         self.running_time_s: float = 0.0
         self.running_time_ms: float = 0.0
         self.optimal: bool = False
+        self.unbounded: bool = False
         self.num_facilities: int = 0
         self.facilities: List[int] = []
         self.distance_to_closest_facility: List[float] = []
@@ -330,6 +351,9 @@ class FLSolution(Data):
 
     def set_optimal(self, optimal: bool) -> None:
         self.optimal = optimal
+
+    def set_unbounded(self, unbounded: bool) -> None:
+        self.unbounded = unbounded
 
     def set_solver(self, solver: str) -> None:
         self.solver = solver
