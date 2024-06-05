@@ -148,7 +148,9 @@ class FLExperiment:
     def run(self):
         _LOGGER.log_header(f"Running experiment for set {self.set_name}")
         for instance_id in self.instance_ids:
-            _LOGGER.log_subheader(f"Running for instance {instance_id.file_path()}")
+            _LOGGER.log_subheader(
+                f"Running for instance {instance_id.file_path()}  ---> T = {instance_id.T}, n = {instance_id.n}"
+            )
             # in here will require some sort of registry
             # solver id -> factory method to construct solver
             run = FLRuns(instance_id, self.solver_ids)

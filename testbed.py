@@ -1,6 +1,7 @@
 import os
 import logging
 from typing import List
+from argparse import ArgumentParser
 from allowed_types import FLSolverType, FLInstanceType
 from util import _DAT
 from problem import FLOfflineInstance
@@ -81,9 +82,11 @@ def id_factory(set_name: str, n: List[int], T: List[int]) -> List[FLInstanceType
 
 
 def main():
-    set_name = "unit1"
+    parser = ArgumentParser()
+    parser.add_argument("--set_name", type=str, default="test")
+    set_name = parser.parse_args().set_name
     num_instances = 30
-    ids = id_factory(set_name, [2, 5, 10], [2, 5, 10])
+    ids = id_factory(set_name, [100000, 1000000], [1000])
     generator = TestbedGenerator(set_name, num_instances, ids)
     generator.write()
 
