@@ -3,6 +3,7 @@ import re
 import shutil
 import logging
 import numpy as np
+from gurobipy import Model
 from util import append_date, DATETIME_FORMAT
 
 
@@ -61,6 +62,10 @@ class InfoLogger:
     def separator_block(self):
         self.separator_line()
         self.separator_line()
+
+    def clear_page(self):
+        for i in range(4):
+            self.blank_line()
 
     def format_numbers_in_string(self, msg: str) -> str:
         if type(msg) != str:
@@ -123,6 +128,15 @@ class InfoLogger:
 
 
 _LOGGER = InfoLogger()
+
+
+def throwaway_gurobi_model():
+    """
+    Create an empty gurobi model and destroy it.
+    This is a hacky workaround to get rid of the dreaded "academic license", and "set parameter username" printouts from gurobi which also print twice in this case because of the log config. These only print the first time gurobi is called in memory. Just call this function from any class that runs a series of gurobi models in the __init__ method to ensure your logging works as expected and is readable.
+    """
+    model = Model("fake")
+    del model
 
 
 def gurobi_log_file():

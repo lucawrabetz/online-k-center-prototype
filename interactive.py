@@ -1,7 +1,7 @@
 from typing import List, Dict
 from solvers import OfflineMIP, SemiOfflineMIP, CCTAlgorithm, IFLSolver, _SOLVER_FACTORY
 from problem import FLOfflineInstance, FLSolution
-from log_config import setup_logging, _LOGGER
+from log_config import setup_logging, throwaway_gurobi_model, _LOGGER
 from allowed_types import FLInstanceType, _SOLVERS
 
 setup_logging()
@@ -12,6 +12,8 @@ class InteractiveExperiment:
     def __init__(self) -> None:
         # T: int = int(input("Enter T: "))
         # n: int = int(input("Enter n: "))
+        throwaway_gurobi_model()
+        _LOGGER.clear_page()
         T: int = 3
         n: int = 2
         self.shape: FLInstanceType = FLInstanceType(n=n, T=T)

@@ -8,7 +8,7 @@ from problem import FLOfflineInstance, FLSolution
 from solvers import IFLSolver, OfflineMIP, SemiOfflineMIP, CCTAlgorithm, _SOLVER_FACTORY
 from data_model import _DATA_MODEL, OBJECTIVE, TIME
 from feature_interface import IFeature
-from log_config import _LOGGER
+from log_config import _LOGGER, throwaway_gurobi_model
 from util import _DAT
 
 
@@ -104,6 +104,7 @@ class FLRuns:
             f"Running solvers {', '.join([s.name for s in self.solver_ids])} on instance {self.instance_id.file_path()}"
         )
         summary: List[str] = []
+        _LOGGER.separator_line()
         for solver_id in self.solver_ids:
             row = self.single_run(solver_id, instance)
             table.add_row(row)
@@ -122,6 +123,8 @@ class FLExperiment:
         self.instance_ids: List[FLInstanceType] = []
         self.solver_ids: List[FLSolverType] = []
         self.solvers: List[IFLSolver] = []
+        throwaway_gurobi_model()
+        _LOGGER.clear_page()
 
     def configure_experiment(
         self,
