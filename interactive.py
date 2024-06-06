@@ -35,10 +35,13 @@ class InteractiveExperiment:
         self.solver_to_solution: Dict[str, FLSolution] = {}
 
     def print(self) -> None:
-        _LOGGER.separator_block()
+        _LOGGER.log_header(
+            f"Interactive Experiment for randomly generated instance with T = {self.instance.id.T}, n = {self.instance.id.n}, gamma = {self.instance.Gamma}"
+        )
+        _LOGGER.separator_line()
         for solver_name, solution in self.solver_to_solution.items():
             solution.print(self.instance, solver_name)
-            _LOGGER.separator_block()
+            _LOGGER.separator_line()
 
     def run(self) -> None:
         for solver in self.solvers:
