@@ -152,9 +152,9 @@ class FLOfflineInstance(Data):
                 writer.writerow(point.x)
 
 
-class CVCTState(Data):
+class CCTState(Data):
     """
-    Class to hold state for the CVCTCA algorithm.
+    Class to hold state for the CCTCA algorithm.
     """
 
     def __init__(self) -> None:
@@ -375,7 +375,7 @@ class FLSolution(Data):
         self.solver = solver
 
     def from_cvtca(
-        self, state: CVCTState, time: float, optimal: bool, solver: str
+        self, state: CCTState, time: float, optimal: bool, solver: str
     ) -> None:
         self.n = state.n
         self.T = state.T

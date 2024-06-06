@@ -62,10 +62,10 @@ class FLInstanceType:
 
 _TEST_SHAPE = FLInstanceType()
 
-_OffMIP = FLSolverType("OffMIP")
-_StMIP = FLSolverType("StMIP")
-_CVCTA = FLSolverType("CVCTA")
-_SOLVERS: List[Any] = [_OffMIP, _StMIP, _CVCTA]
+_OMIP = FLSolverType("OMIP")
+_SOMIP = FLSolverType("SOMIP")
+_CCTA = FLSolverType("CCTA")
+_SOLVERS: List[Any] = [_OMIP, _SOMIP, _CCTA]
 
 _BUILT_IN_TYPES: List[Any] = [str, int, float, bool]
 _ALLOWED_TYPES: List[Any] = _SOLVERS.copy()

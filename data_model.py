@@ -1,6 +1,6 @@
 from typing import Any, List
 from feature_interface import IFeature
-from allowed_types import FLSolverType, _StMIP, _SOLVERS
+from allowed_types import FLSolverType, _OMIP, _SOLVERS
 
 
 class DataModel:
@@ -16,7 +16,7 @@ ID = IFeature("id", 0, int, "ID", "ID")
 TIME_PERIODS = IFeature("time_periods", 2, int, "Time Periods", "T")
 
 # SOLVER is REQUIRED.
-SOLVER = IFeature("solver", _StMIP, FLSolverType, "Solver", "Sol", _SOLVERS)
+SOLVER = IFeature("solver", _OMIP, FLSolverType, "Solver", "Sol", _SOLVERS)
 
 # Outputs
 OBJECTIVE = IFeature("objective", 0.0, float, "Objective", "Obj")

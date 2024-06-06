@@ -1,8 +1,8 @@
 from typing import List, Dict
-from solvers import OfflineMIP, OnlineCVCTAlgorithm, StaticMIP, IFLSolver
+from solvers import OfflineMIP, SemiOfflineMIP, CCTAlgorithm, IFLSolver, _SOLVER_FACTORY
 from problem import FLOfflineInstance, FLSolution
 from log_config import setup_logging, _LOGGER
-from allowed_types import FLInstanceType
+from allowed_types import FLInstanceType, _SOLVERS
 
 setup_logging()
 import logging
@@ -26,9 +26,7 @@ class InteractiveExperiment:
         #    self.instance.set_random(Gamma=Gamma)
         self.instance.set_random(Gamma=0.75)
         self.solvers: List[IFLSolver] = [
-            OfflineMIP(),
-            StaticMIP(),
-            OnlineCVCTAlgorithm(),
+            _SOLVER_FACTORY.solver(s_id) for s_id in _SOLVERS
         ]
         for solver in self.solvers:
             solver.configure_solver(self.instance)

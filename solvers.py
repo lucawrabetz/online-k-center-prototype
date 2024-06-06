@@ -4,11 +4,11 @@ import numpy as np
 import logging
 from abc import ABC, abstractmethod
 from typing import List, Any, Tuple, Dict
-from gurobipy import Model, GRB, quicksum
-from problem import FLOfflineInstance, FLSolution, CVCTState
 from log_config import gurobi_log_file, _LOGGER
 from util import append_date
-from allowed_types import FLSolverType, _OffMIP, _StMIP, _CVCTA, _SOLVERS
+from allowed_types import FLSolverType, _OMIP, _SOMIP, _CCTA, _SOLVERS
+from problem import FLOfflineInstance, FLSolution, CCTState
+from gurobipy import Model, GRB, quicksum
 
 GRBVar = Any
 
@@ -26,23 +26,176 @@ class IFLSolver(ABC):
     def configure_solver(self, instance: FLOfflineInstance) -> None:
         pass
 
+    # TODO: add a clean timing decorator to this.
     @abstractmethod
     def solve(self, instance: FLOfflineInstance) -> FLSolution:
         pass
 
 
-class OfflineMIP(IFLSolver):
-    def __init__(self) -> None:
-        """Constructs blank gurobi model."""
-        super().__init__(_OffMIP)
+class IFLMIP(IFLSolver):
+    def __init__(self, solver_id: FLSolverType) -> None:
+        super().__init__(solver_id)
 
     def init_mip(self) -> None:
-        self.model: Model = Model("OfflineMIP")
+        self.model: Model = Model(self.id.name)
         self.model.setParam("LogToConsole", 0)
         self.model.setParam("LogFile", gurobi_log_file())
-        self.zeta: List[GRBVar] = []
-        self.z: List[GRBVar] = []
-        self.y: List[GRBVar] = []
+
+    @abstractmethod
+    def add_variables(self, instance: FLOfflineInstance) -> None:
+        pass
+
+    @abstractmethod
+    def add_constraints(self, instance: FLOfflineInstance) -> None:
+        pass
+
+    @abstractmethod
+    def add_objective_function(self, instance: FLOfflineInstance) -> None:
+        pass
+
+    @abstractmethod
+    def final_facilities_service_costs(self) -> Tuple[List[int], List[float]]:
+        pass
+
+    def configure_solver(self, instance: FLOfflineInstance) -> None:
+        if not instance.is_set:
+            raise ValueError("Instance must be set before configuring solver.")
+        self.init_mip()
+        self.T = instance.id.T
+        self.add_variables(instance)
+        self.add_constraints(instance)
+        self.add_objective_function(instance)
+
+    def solve(self, instance: FLOfflineInstance) -> FLSolution:
+        """Solve model."""
+        start = time.time()
+        self.model.optimize()
+        self.running_time_s = time.time() - start
+        self.optimal = self.model.status == GRB.OPTIMAL
+        solution = FLSolution()
+        state = CCTState()
+        state.bare_final_state(instance, self.final_facilities_service_costs())
+        solution.from_cvtca(state, self.running_time_s, self.optimal, self.id.name)
+        return solution
+
+    def write_model(self) -> None:
+        """Write model to file."""
+        filename = f"{append_date(self.id.name)} + '.lp'"
+        self.model.write(filename)
+
+
+class OfflineMIP(IFLMIP):
+    def __init__(self) -> None:
+        super().__init__(_OMIP)
+
+    def add_variables(self, instance: FLOfflineInstance) -> None:
+        self.y = [
+            self.model.addVar(vtype=GRB.BINARY, name=f"y^{j}")
+            for j in range(1, self.T + 1)
+        ]
+        self.z = [
+            [
+                self.model.addVar(vtype=GRB.BINARY, name=f"z^{i}_{j}")
+                for j in range(0, self.T + 1)
+            ]
+            for i in range(1, self.T + 1)
+        ]
+        self.zeta = [
+            self.model.addVar(vtype=GRB.CONTINUOUS, name=f"zeta^{t}")
+            for t in range(1, self.T + 1)
+        ]
+        self.model.update()
+
+    def add_zetalowerbound_constraints(self, instance: FLOfflineInstance) -> None:
+        for t in range(1, self.T + 1):
+            t_index = t - 1
+            for i in range(1, t + 1):
+                i_index = i - 1
+                self.model.addConstr(
+                    self.zeta[t_index]
+                    >= quicksum(
+                        instance.get_distance(i, j) * self.z[i_index][j]
+                        for j in range(self.T + 1)
+                    ),
+                    name=f"C_zeta_lb_{t}_{i}",
+                )
+        self.model.update()
+
+    def add_linkzy_constraints(self, instance: FLOfflineInstance) -> None:
+        for i in range(1, self.T + 1):
+            i_index = i - 1
+            for j in range(1, self.T + 1):
+                # logging.debug(
+                #     f"Adding linkzy constraint for i = {i}, j = {j}. i_index = {i_index}."
+                # )
+                # logging.debug(f"y: {self.y}, z: {self.z}")
+                self.model.addConstr(
+                    self.z[i_index][j] <= self.y[j - 1],
+                    name=f"C_linkzy_{i}_{j}",
+                )
+        self.model.update()
+
+    def add_oneassignment_constraints(self, instance: FLOfflineInstance) -> None:
+        for i in range(1, self.T + 1):
+            i_index = i - 1
+            self.model.addConstr(
+                quicksum(self.z[i_index][j] for j in range(self.T + 1)) == 1,
+                name=f"C_oneassignment_{i}",
+            )
+        self.model.update()
+
+    def add_constraints(self, instance: FLOfflineInstance) -> None:
+        self.add_zetalowerbound_constraints(instance)
+        self.add_linkzy_constraints(instance)
+        self.add_oneassignment_constraints(instance)
+
+    def add_objective_function(self, instance: FLOfflineInstance) -> None:
+        self.model.setObjective(
+            quicksum(self.y[j] for j in range(self.T)) * instance.Gamma
+            + quicksum(self.zeta[t] for t in range(self.T)),
+            GRB.MINIMIZE,
+        )
+        self.model.update()
+
+    def final_facilities_service_costs(self) -> Tuple[List[int], List[float]]:
+        built = [False for _ in range(self.T)]
+        facilities = [0]  # static facility set, length depends on facilities built
+        service_costs = [
+            0.0
+        ]  # from 0, ..., T, index t represents the service cost at time t
+        for t in range(1, self.T + 1):
+            t_index = t - 1
+            service_costs.append(self.zeta[t_index].X)
+
+        for j in range(1, t + 1):
+            j_index = j - 1
+            if self.y[j_index].X > 0.5:
+                facilities.append(j)
+
+        return (facilities, service_costs)
+
+    def solve(self, instance: FLOfflineInstance) -> FLSolution:
+        """Solve model."""
+        start = time.time()
+        self.model.optimize()
+        self.running_time_s = time.time() - start
+        self.optimal = self.model.status == GRB.OPTIMAL
+        solution = FLSolution()
+        state = CCTState()
+        state.bare_final_state(instance, self.final_facilities_service_costs())
+        solution.from_cvtca(state, self.running_time_s, self.optimal, self.id.name)
+        return solution
+
+    def write_model(self) -> None:
+        """Write model to file."""
+        filename = append_date(self.id.name) + ".lp"
+        self.model.write(filename)
+
+
+class SemiOfflineMIP(IFLMIP):
+    def __init__(self) -> None:
+        """Constructs blank gurobi model."""
+        super().__init__(_SOMIP)
 
     def add_variables(self, instance: FLOfflineInstance) -> None:
         self.y = [
@@ -128,6 +281,15 @@ class OfflineMIP(IFLSolver):
             )
         self.model.update()
 
+    def add_constraints(self, instance: FLOfflineInstance) -> None:
+        self.add_zetalowerbound_constraints(instance)
+        self.add_linkzy_constraints(instance)
+        self.add_assignment_constraints(instance)
+        self.add_nondecreasingy_constraints(instance)
+        # TODO: ask Jourdain about removing the following constraints.
+        # self.add_atmostonefacility_constraints(instance)
+        self.model.update()
+
     def add_objective_function(self, instance: FLOfflineInstance) -> None:
         self.model.setObjective(
             quicksum(self.y[self.T - 1][j] for j in range(self.T)) * instance.Gamma
@@ -135,22 +297,6 @@ class OfflineMIP(IFLSolver):
             GRB.MINIMIZE,
         )
         self.model.update()
-
-    def configure_solver(self, instance: FLOfflineInstance) -> None:
-        """
-        Set up variables, constraints, and objective function given a full instance.
-        """
-        if not instance.is_set:
-            raise ValueError("Instance must be set before configuring solver.")
-        self.T = instance.id.T
-        self.init_mip()
-        self.add_variables(instance)
-        self.add_zetalowerbound_constraints(instance)
-        self.add_linkzy_constraints(instance)
-        self.add_assignment_constraints(instance)
-        self.add_nondecreasingy_constraints(instance)
-        self.add_atmostonefacility_constraints(instance)
-        self.add_objective_function(instance)
 
     def final_facilities_service_costs(self) -> Tuple[List[int], List[float]]:
         built = [False for _ in range(self.T)]
@@ -175,156 +321,15 @@ class OfflineMIP(IFLSolver):
             facilities.append(facility)
         return (facilities, service_costs)
 
-    def solve(self, instance: FLOfflineInstance) -> FLSolution:
-        """Solve model."""
-        start = time.time()
-        self.model.optimize()
-        self.running_time_s = time.time() - start
-        self.optimal = self.model.status == GRB.OPTIMAL
-        solution = FLSolution()
-        state = CVCTState()
-        state.bare_final_state(instance, self.final_facilities_service_costs())
-        solution.from_cvtca(state, self.running_time_s, self.optimal, self.id.name)
-        return solution
 
-    def write_model(self, filename: str = "OfflineMIP.lp") -> None:
-        """Write model to file."""
-        self.model.write(filename)
-
-
-class StaticMIP(IFLSolver):
+class CCTAlgorithm(IFLSolver):
     def __init__(self) -> None:
-        super().__init__(_StMIP)
-
-    def init_mip(self) -> None:
-        self.model: Model = Model("StaticMIP")
-        self.model.setParam("LogToConsole", 0)
-        self.model.setParam("LogFile", gurobi_log_file())
-        self.zeta: List[GRBVar] = []
-        self.z: List[GRBVar] = []
-        self.y: List[GRBVar] = []
-
-    def add_variables(self, instance: FLOfflineInstance) -> None:
-        self.y = [
-            self.model.addVar(vtype=GRB.BINARY, name=f"y^{j}")
-            for j in range(1, self.T + 1)
-        ]
-        self.z = [
-            [
-                self.model.addVar(vtype=GRB.BINARY, name=f"z^{i}_{j}")
-                for j in range(0, self.T + 1)
-            ]
-            for i in range(1, self.T + 1)
-        ]
-        self.zeta = [
-            self.model.addVar(vtype=GRB.CONTINUOUS, name=f"zeta^{t}")
-            for t in range(1, self.T + 1)
-        ]
-        self.model.update()
-
-    def add_zetalowerbound_constraints(self, instance: FLOfflineInstance) -> None:
-        for t in range(1, self.T + 1):
-            t_index = t - 1
-            for i in range(1, t + 1):
-                i_index = i - 1
-                self.model.addConstr(
-                    self.zeta[t_index]
-                    >= quicksum(
-                        instance.get_distance(i, j) * self.z[i_index][j]
-                        for j in range(self.T + 1)
-                    ),
-                    name=f"C_zeta_lb_{t}_{i}",
-                )
-        self.model.update()
-
-    def add_linkzy_constraints(self, instance: FLOfflineInstance) -> None:
-        for i in range(1, self.T + 1):
-            i_index = i - 1
-            for j in range(1, self.T + 1):
-                # logging.debug(
-                #     f"Adding linkzy constraint for i = {i}, j = {j}. i_index = {i_index}."
-                # )
-                # logging.debug(f"y: {self.y}, z: {self.z}")
-                self.model.addConstr(
-                    self.z[i_index][j] <= self.y[j - 1],
-                    name=f"C_linkzy_{i}_{j}",
-                )
-        self.model.update()
-
-    def add_oneassignment_constraints(self, instance: FLOfflineInstance) -> None:
-        for i in range(1, self.T + 1):
-            i_index = i - 1
-            self.model.addConstr(
-                quicksum(self.z[i_index][j] for j in range(self.T + 1)) == 1,
-                name=f"C_oneassignment_{i}",
-            )
-        self.model.update()
-
-    def add_objective_function(self, instance: FLOfflineInstance) -> None:
-        self.model.setObjective(
-            quicksum(self.y[j] for j in range(self.T)) * instance.Gamma
-            + quicksum(self.zeta[t] for t in range(self.T)),
-            GRB.MINIMIZE,
-        )
-        self.model.update()
-
-    def configure_solver(self, instance: FLOfflineInstance) -> None:
-        """
-        Set up variables, constraints, and objective function given a full instance.
-        """
-        if not instance.is_set:
-            raise ValueError("Instance must be set before configuring solver.")
-        self.init_mip()
-        self.T = instance.id.T
-        self.add_variables(instance)
-        self.add_zetalowerbound_constraints(instance)
-        self.add_linkzy_constraints(instance)
-        self.add_oneassignment_constraints(instance)
-        self.add_objective_function(instance)
-
-    def final_facilities_service_costs(self) -> Tuple[List[int], List[float]]:
-        built = [False for _ in range(self.T)]
-        facilities = [0]  # static facility set, length depends on facilities built
-        service_costs = [
-            0.0
-        ]  # from 0, ..., T, index t represents the service cost at time t
-        for t in range(1, self.T + 1):
-            t_index = t - 1
-            service_costs.append(self.zeta[t_index].X)
-
-        for j in range(1, t + 1):
-            j_index = j - 1
-            if self.y[j_index].X > 0.5:
-                facilities.append(j)
-
-        return (facilities, service_costs)
-
-    def solve(self, instance: FLOfflineInstance) -> FLSolution:
-        """Solve model."""
-        start = time.time()
-        self.model.optimize()
-        self.running_time_s = time.time() - start
-        self.optimal = self.model.status == GRB.OPTIMAL
-        solution = FLSolution()
-        state = CVCTState()
-        state.bare_final_state(instance, self.final_facilities_service_costs())
-        solution.from_cvtca(state, self.running_time_s, self.optimal, self.id.name)
-        return solution
-
-    def write_model(self) -> None:
-        """Write model to file."""
-        filename = append_date(self.id.name) + ".lp"
-        self.model.write(filename)
-
-
-class OnlineCVCTAlgorithm(IFLSolver):
-    def __init__(self) -> None:
-        super().__init__(_CVCTA)
+        super().__init__(_CCTA)
 
     def configure_solver(self, instance: FLOfflineInstance) -> None:
         if not instance.is_set:
             raise ValueError("Instance must be set before configuring solver.")
-        self.state: CVCTState = CVCTState()
+        self.state: CCTState = CCTState()
         self.offline_instance = instance
         self.T = instance.id.T
         self.Gamma = instance.Gamma
@@ -386,8 +391,8 @@ class SolverTypeRegistry:
 
 _SOLVER_FACTORY = SolverTypeRegistry(
     {
-        _StMIP: StaticMIP,
-        _OffMIP: OfflineMIP,
-        _CVCTA: OnlineCVCTAlgorithm,
+        _OMIP: OfflineMIP,
+        _SOMIP: SemiOfflineMIP,
+        _CCTA: CCTAlgorithm,
     }
 )

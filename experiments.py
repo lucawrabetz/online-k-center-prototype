@@ -3,10 +3,9 @@ import pandas as pd
 import logging
 from typing import Dict, List, Any
 from allowed_types import FLInstanceType, FLSolverType
-from allowed_types import _StMIP, _OffMIP, _CVCTA
+from allowed_types import _OMIP, _SOMIP, _CCTA
 from problem import FLOfflineInstance, FLSolution
-from solvers import OfflineMIP, OnlineCVCTAlgorithm, StaticMIP, _SOLVER_FACTORY
-from solvers import IFLSolver
+from solvers import IFLSolver, OfflineMIP, SemiOfflineMIP, CCTAlgorithm, _SOLVER_FACTORY
 from data_model import _DATA_MODEL, OBJECTIVE, TIME
 from feature_interface import IFeature
 from log_config import _LOGGER
@@ -143,7 +142,7 @@ class FLExperiment:
         if solver_ids:
             self.solver_ids = solver_ids
         else:
-            self.solver_ids = [_StMIP]
+            self.solver_ids = [_OMIP]
 
     def run(self):
         _LOGGER.log_header(f"Running experiment for set {self.set_name}")
