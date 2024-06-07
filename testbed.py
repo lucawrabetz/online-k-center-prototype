@@ -86,7 +86,9 @@ def main():
     parser.add_argument("--set_name", type=str, default="test")
     set_name = parser.parse_args().set_name
     num_instances = 30
-    ids = id_factory(set_name, [100000, 1000000], [1000])
+    dimensions = [100000, 1000000]
+    time_periods = [1000]
+    ids = id_factory(set_name, dimensions, time_periods)
     generator = TestbedGenerator(set_name, num_instances, ids)
     generator.write()
 
