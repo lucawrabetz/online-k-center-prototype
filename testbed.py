@@ -1,5 +1,6 @@
 import os
 import logging
+import warnings
 from typing import List
 from argparse import ArgumentParser
 from allowed_types import FLSolverType, FLInstanceType
@@ -30,31 +31,39 @@ class TestbedGenerator:
         num_instances: number of instances to generate per instance type / shape / parameter combination
         """
         if set_name in _RESERVED_SETNAMES:
-            raise ValueError(f"Set name {set_name} is already used.")
-        self.set_name = set_name
-        self.num_instances = num_instances
-        self.instance_ids = instance_ids
-        self.final_ids: List[FLInstanceType] = []
+            _LOGGER.log_warning(f"Set name {set_name} already exists in {_DAT}")
+        self._set_name = set_name
+        self._num_instances = num_instances
+        self._instance_ids = instance_ids
+        self._final_ids: List[FLInstanceType] = []
 
     def generate_for_one_instanceid(self, instance_id: FLInstanceType) -> None:
-        if instance_id.set_name != self.set_name:
+        if instance_id.set_name != self._set_name:
             raise ValueError(
-                f"Instance set name {instance_id.set_name} does not match testbed set name {self.set_name}."
+                f"Instance set name {instance_id.set_name} does not match testbed set name {self._set_name}."
             )
         if instance_id.id != -1:
             raise ValueError(
                 f"Instance type {instance_id.set_name} already has id {instance_id.id}."
             )
-        for i in range(self.num_instances):
+        for i in range(self._num_instances):
             new_id = FLInstanceType(
-                set_name=self.set_name, n=instance_id.n, T=instance_id.T
+                set_name=self._set_name, n=instance_id.n, T=instance_id.T
             )
             new_id.set_id(i)
-            self.final_ids.append(new_id)
+            if os.path.exists(os.path.join(new_id.file_path)):
+                _LOGGER.log_warning(
+                    f"Instance {new_id.file_path} already exists, I will not generate and overwrite"
+                )
+                continue
+            self._final_ids.append(new_id)
             instance = FLOfflineInstance(new_id)
             # for now, our random experiments always use the unit "square" and the interval [0, 1] for gamma, both uniform
             instance.set_random(low=0, high=1)
             instance.write_to_csv()
+            _LOGGER.log_body(
+                f"Generated instance {new_id.set_name}, n = {new_id.n}, T = {new_id.T}, number #{new_id.id}"
+            )
 
     def write(self) -> List[FLInstanceType]:
         """
@@ -63,11 +72,11 @@ class TestbedGenerator:
         """
         if not os.path.exists(_DAT):
             os.makedirs(_DAT)
-        if not os.path.exists(os.path.join(_DAT, self.set_name)):
-            os.makedirs(os.path.join(_DAT, self.set_name))
-        for instance_id in self.instance_ids:
+        if not os.path.exists(os.path.join(_DAT, self._set_name)):
+            os.makedirs(os.path.join(_DAT, self._set_name))
+        for instance_id in self._instance_ids:
             self.generate_for_one_instanceid(instance_id)
-        return self.final_ids
+        return self._final_ids
 
 
 def id_factory(set_name: str, n: List[int], T: List[int]) -> List[FLInstanceType]:
@@ -85,8 +94,9 @@ def main():
     parser = ArgumentParser()
     parser.add_argument("--set_name", type=str, default="test")
     set_name = parser.parse_args().set_name
+    _LOGGER.log_header(f"Generating testbed {set_name}")
     num_instances = 30
-    dimensions = [100000, 1000000]
+    dimensions = [10]
     time_periods = [1000]
     ids = id_factory(set_name, dimensions, time_periods)
     generator = TestbedGenerator(set_name, num_instances, ids)

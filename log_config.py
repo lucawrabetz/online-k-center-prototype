@@ -36,12 +36,14 @@ def setup_logging():
 
 
 class InfoLogger:
-    INFO_CHARLEN: int = 8
-    DEBUG_CHARLEN: int = 9
+    INFO_CHARLEN: int = len("[INFO]: ")
+    DEBUG_CHARLEN: int = len("[DEBUG]: ")
+    WARN_CHARLEN: int = len("[WARNING]: ")
     SPACE_INDENT: int = 4
     FINAL_INDENT_CHARLEN: int = max(INFO_CHARLEN, DEBUG_CHARLEN) + SPACE_INDENT
     INFO_INDENT: str = f"{' ' * (FINAL_INDENT_CHARLEN - INFO_CHARLEN)}-> "
     DEBUG_INDENT: str = f"{' ' * (FINAL_INDENT_CHARLEN - DEBUG_CHARLEN)}>>>> "
+    WARN_INDENT: str = f"{' ' * (FINAL_INDENT_CHARLEN - WARN_CHARLEN)}>>>> "
 
     def __init__(self, logger=logging, special_char="-", precision=2):
         self.logger = logger
@@ -125,6 +127,10 @@ class InfoLogger:
     def log_debug(self, msg: str, final_punc: str = "."):
         msg = self.format_numbers_in_string(msg)
         logging.debug(f"{self.DEBUG_INDENT}{msg}{final_punc}")
+
+    def log_warning(self, msg: str, final_punc: str = "."):
+        msg = self.format_numbers_in_string(msg)
+        logging.warn(f"{self.WARN_INDENT}{msg}{final_punc}")
 
 
 _LOGGER = InfoLogger()

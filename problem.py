@@ -114,7 +114,7 @@ class FLOfflineInstance(Data):
         """
         if self.id.id == -1:
             raise ValueError("Instance has no id, cannot construct filename.")
-        filepath = self.id.file_path()
+        filepath = self.id.file_path
         if not os.path.exists(filepath):
             raise ValueError(f"File {filepath} does not exist.")
         if not filepath.endswith(".csv"):
@@ -144,7 +144,7 @@ class FLOfflineInstance(Data):
         """
         if self.id.id == -1:
             raise ValueError("Instance has no id, cannot construct filename.")
-        filepath = self.id.file_path()
+        filepath = self.id.file_path
         with open(filepath, "w", newline="") as file:
             writer = csv.writer(file)
             writer.writerow([self.Gamma])

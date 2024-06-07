@@ -28,15 +28,38 @@ class FLInstanceType:
     Class to store all (id) information about an instance type:
     """
 
-    def __init__(self, set_name: str = "test", n: int = 2, T: int = 3) -> None:
+    def __init__(
+        self, set_name: str = "test", n: int = 2, T: int = 3, instance_id: int = None
+    ) -> None:
         self.set_name: str = set_name
         self.n: int = n
         self.T: int = T
         # Unique identifier if all instance parameters already exist in another instance, only set for saved instances.
-        self.id: int = -1
+        self.id: int = -1 if instance_id is None else instance_id
+        self._file_path: str = ""
+        self.update_filepath()
 
-    def set_id(self, id: int) -> None:
-        self.id = id
+    @property
+    def file_path(self) -> str:
+        self.update_filepath()
+        if self._file_path == "":
+            # TODO: add warning here
+            return ""
+        else:
+            return self._file_path
+
+    def update_filepath(self) -> None:
+        if self.id >= -1:
+            self._file_path = os.path.join(
+                _DAT, self.set_name, f"{self.set_name}_{self.n}_{self.T}_{self.id}.csv"
+            )
+        else:
+            # TODO: decouple/wrap instead of checking.
+            self._file_path = ""
+
+    def set_id(self, instance_id: int) -> None:
+        self.id = instance_id
+        self.update_filepath()
 
     def from_filename(self, filename: str) -> None:
         split = filename.split("_")
@@ -46,15 +69,6 @@ class FLInstanceType:
         self.n = int(split[1])
         self.T = int(split[2])
         self.id = int(split[3].replace(".csv", ""))
-
-    def file_path(self) -> str:
-        if self.id is not None:
-            return os.path.join(
-                _DAT, self.set_name, f"{self.set_name}_{self.n}_{self.T}_{self.id}.csv"
-            )
-        else:
-            # TODO: decouple/wrap instead of checking.
-            raise ValueError("Instance has no id so is not saved.")
 
     def print(self) -> None:
         _LOGGER.log_body(f"n: {self.n}, T: {self.T}")
