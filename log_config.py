@@ -102,6 +102,7 @@ class InfoLogger:
             self.log_debug(" ".join(formatted_row), "")
 
     def log_header(self, msg: str):
+        self.blank_line()
         self.separator_block()
         msg = self.format_numbers_in_string(msg)
         logging.info(f"{msg}.")
@@ -110,7 +111,9 @@ class InfoLogger:
 
     def log_subheader(self, msg: str):
         msg = self.format_numbers_in_string(msg)
+        self.blank_line()
         logging.info(f"{msg}.")
+        self.blank_line()
 
     def log_bodydebug(self, msg: str):
         msg = self.format_numbers_in_string(msg)
