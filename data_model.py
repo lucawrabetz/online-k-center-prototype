@@ -30,6 +30,10 @@ ID = IFeature("id", 0, int, "ID", "ID")
 # TODO: TIME_PERIODS and GAMMA is a good example of potential run vs instance parameter
 TIME_PERIODS = IFeature("T", 2, int, "Time Periods", "T")
 GAMMA = IFeature("Gamma", 2, int, "Gamma", "Gamma")
+# if row[GAMMA_RUN] = -1, then gamma = row[GAMMA], otherwise
+# gamma = row[GAMMA_RUN]
+GAMMA_RUN = IFeature("Gamma_run", -1, int, "Gamma", "Gamma")
+TIME_PERIODS_RUN = IFeature("T_run", -1, int, "Time Periods", "T")
 
 # SOLVER is REQUIRED.
 SOLVER = IFeature("solver", _OMIP, FLSolverType, "Solver", "Sol", _SOLVERS)
@@ -47,7 +51,9 @@ features = [
     DIMENSION,
     ID,
     TIME_PERIODS,
+    TIME_PERIODS_RUN,
     GAMMA,
+    GAMMA_RUN,
     SOLVER,
     OBJECTIVE,
     UNBOUNDED,

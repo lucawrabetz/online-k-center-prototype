@@ -60,7 +60,15 @@ class FLOfflineInstance(Data):
         self.points: List[DPoint] = [
             DPoint(np.zeros(self.id.n)) for _ in range(self.id.T + 1)
         ]
+        # Note that the information encoded by these 3 variables could be encoded in less, but this is optimized for readability.
+        # self.Gamma is the value currently active for solving this instance.
+        # self.original_Gamma is the original value, i.e. the one written to the instance file.
+        # self.set_Gamma is the value of gamma set manually for an experiment that is run with a different value than on file.
+        # data functionality should look at set_Gamma when looking for the run parameter, and original_Gamma when looking for the instance parameter.
+        # self.Gamma should always equal at least one of set and original.
         self.Gamma: float = 0.0
+        self.original_Gamma: float = 0.0
+        self.set_Gamma: float = -1.0
         self.distances: np.ndarray = np.zeros((self.id.T + 1, self.id.T + 1))
         self.distance: Callable[[DPoint, DPoint], float] = euclidean_distance
 
@@ -82,19 +90,37 @@ class FLOfflineInstance(Data):
         """
         return self.distances[i][j]
 
+    def first_gamma(self, Gamma: float) -> None:
+        self.original_Gamma = Gamma
+        self.Gamma = Gamma
+
+    def new_active_gamma(self, Gamma: float) -> None:
+        self.set_Gamma = Gamma
+        self.Gamma = Gamma
+
     def set_random(self, low: int = 5, high: int = 15, Gamma: float = None) -> None:
         """
         Set demand points by instantiating and calling on an FLDistribution object.
         Update distance matrix.
+        Gamma is generated uniformly [0, 1] by default.
+        To set it manually to a different value than its instance for a run, set_gamma_run.
         """
         dist = FLDistribution(self.id)
         if Gamma:
-            self.Gamma = Gamma
+            self.first_gamma(Gamma)
         else:
-            self.Gamma = dist.gamma_interval(low, high)
+            self.first_gamma(dist.gamma_interval(low, high))
         self.points = dist.x_unit_square()
         self.set_distance_matrix()
         self._is_set = True
+
+    def set_gamma_run(self, Gamma: float):
+        """
+        Also changes self.gamma, so we don't need to change any functionality outside of it based on whether gamma was manually set. But we know it was if set_Gamma == Gamma, or by checking that self.set_Gamma >= 0.
+        """
+        if Gamma < 0:
+            raise ValueError("Gamma must be non-negative.")
+        self.new_active_gamma(Gamma)
 
     def read_csv_file(self, file_path: str) -> Tuple[float, List[np.ndarray]]:
         with open(file_path, "r") as file:

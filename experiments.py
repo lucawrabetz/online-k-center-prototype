@@ -36,8 +36,15 @@ class OutputRow:
                 self.row[feature] = instance.id.id
             elif feature.name == "T":
                 self.row[feature] = instance.id.T
+            elif feature.name == "T_run":
+                # TODO: add solver suite functionality for decoupled T_run, and refactor gamma_run and T_run
+                self.row[feature] = -1
+            # Workflow for decoupled run / instance parameter.
+            # Defaulting the decoupled run proxy to -1 essentially takes care of everything. Original parameter (gamma) is updated if the run parameter is set, so all functionality still calls gamma and works for the run. We achieve this by maintaining 3 gamma attributes on the problem class because gamma is a "decoupled parameter", so one attribute is for the instance parameter, one is for the run_parameter when the instance is being used for a run, and one is for actual run functionality (which we don't look at here.)
+            elif feature.name == "Gamma_run":
+                self.row[feature] = instance.set_Gamma
             elif feature.name == "Gamma":
-                self.row[feature] = instance.Gamma
+                self.row[feature] = instance.original_Gamma
             elif feature.name == "solver":
                 self.row[feature] = solver.id.name
             elif feature.name == "objective":
@@ -118,6 +125,7 @@ class FLExperiment:
         self.service_wrapper: HorizonCSVWrapper = HorizonCSVWrapper()
         self.time_wrapper: HorizonCSVWrapper = HorizonCSVWrapper(_TIMEDB)
         self.run_id: int = get_next_run_id()
+        self.gamma: float = -1.0
         throwaway_gurobi_model()
         _LOGGER.clear_page()
 
@@ -125,12 +133,14 @@ class FLExperiment:
         self,
         instance_ids: List[FLInstanceType] = None,
         solver_ids: List[FLSolverType] = None,
+        gamma: float = None,
         params: Any = None,
     ):
         """
         initially:
             instances: just all files in directory dat/set_name
             solvers: passed explicitly or just fully offline mip
+            gamma: use instance gamma
         """
         filenames = os.listdir(self.data_path)
         for filename in filenames:
@@ -141,10 +151,14 @@ class FLExperiment:
             self.solver_ids = solver_ids
         else:
             self.solver_ids = [_OMIP]
+        if gamma is not None:
+            self.gamma = gamma
 
     def single_run(
         self, solver_id: FLSolverType, instance: FLOfflineInstance
     ) -> OutputRow:
+        if self.gamma >= 0:
+            instance.set_gamma_run(self.gamma)
         solver = _SOLVER_FACTORY.solver(solver_id)
         solver.configure_solver(instance)
         solution: FLSolution = solver.solve(instance)
@@ -157,7 +171,14 @@ class FLExperiment:
         return row
 
     def run(self) -> None:
-        _LOGGER.log_header(f"Running experiment for set {self.set_name}")
+        gamma_str: str = ""
+        if self.gamma >= 0:
+            gamma_str = str(self.gamma)
+        else:
+            gamma_str = "instance"
+        _LOGGER.log_header(
+            f"Running experiment for set {self.set_name} with {gamma_str} gamma"
+        )
         for instance_id in self.instance_ids:
             instance = FLOfflineInstance(instance_id)
             instance.read()
