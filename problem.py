@@ -169,6 +169,7 @@ class CCTState(Data):
         self.facilities: List[int] = []
         self.distance_to_closest_facility: List[float] = []
         self.service_costs: List[float] = []
+        self.iteration_time_ms: List[float] = []
 
     def configure_state(self, instance: FLOfflineInstance) -> None:
         """
@@ -182,12 +183,20 @@ class CCTState(Data):
         self.num_facilities = 1
         self.t_index = 1
         self.cum_var_cost = 0.0
-        self.facilities = [-1 if t > 0 else 0 for t in range(self.T + 1)]
+        self.iteration_time_ms = [0.0]
+        self.facilities = [
+            -1 if t > 0 else 0 for t in range(self.T + 1)
+        ]  # final decisions for each time period
         self.distance_to_closest_facility = [
             -1 if t > 0 else 0.0 for t in range(self.T + 1)
-        ]
-        self.service_costs = [-1 if t > 0 else 0.0 for t in range(self.T + 1)]
+        ]  # current distances for existing points
+        self.service_costs = [
+            -1 if t > 0 else 0.0 for t in range(self.T + 1)
+        ]  # final service costs for time periods
         self._is_set = True
+
+    def add_iteration_time(self, time: float) -> None:
+        self.iteration_time_ms.append(time * 1000)
 
     def update_distances_new_facility(
         self, instance: FLOfflineInstance, ell: int
@@ -309,8 +318,8 @@ class CCTState(Data):
         """
         _LOGGER.log_debug("Computing final objective..")
         _LOGGER.log_debug("Final service costs", ":")
-        for t, service_cost in enumerate(self.service_costs):
-            _LOGGER.log_debug(f"t: {t}, service cost: {service_cost}")
+        # for t, service_cost in enumerate(self.service_costs):
+        #    _LOGGER.log_debug(f"t: {t}, service cost: {service_cost}")
         _LOGGER.log_debug(f"Sum of service costs: {sum(self.service_costs)}")
         self.objective = self.Gamma * (self.num_facilities - 1) + sum(
             self.service_costs
@@ -329,8 +338,10 @@ class FLSolution(Data):
         self.T: int = 0
         self.Gamma: float = 0.0
         self.objective: float = 0.0
+        self.objective_horizon: List[float] = []
         self.running_time_s: float = 0.0
         self.running_time_ms: float = 0.0
+        self.iteration_time_ms: List[float] = []
         self.optimal: bool = False
         self.unbounded: bool = False
         self.num_facilities: int = 0
@@ -386,6 +397,7 @@ class FLSolution(Data):
         self.facilities = state.facilities
         self.distance_to_closest_facility = state.distance_to_closest_facility
         self.service_costs = state.service_costs
+        self.iteration_time_ms = state.iteration_time_ms
         self.set_running_time(time)
         self.set_optimal(optimal)
         self.set_solver(solver)

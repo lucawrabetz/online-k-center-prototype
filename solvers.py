@@ -11,6 +11,7 @@ from problem import FLOfflineInstance, FLSolution, CCTState
 from gurobipy import Model, GRB, quicksum
 
 GRBVar = Any
+_GUROBITIMELIMIT_S = 3600
 
 
 class IFLSolver(ABC):
@@ -40,6 +41,7 @@ class IFLMIP(IFLSolver):
         self.model: Model = Model(self.id.name)
         self.model.setParam("LogToConsole", 0)
         self.model.setParam("LogFile", gurobi_log_file())
+        self.model.setParam("TimeLimit", _GUROBITIMELIMIT_S)
 
     @abstractmethod
     def add_variables(self, instance: FLOfflineInstance) -> None:
@@ -70,7 +72,10 @@ class IFLMIP(IFLSolver):
         """Solve model."""
         start = time.time()
         self.model.optimize()
-        self.running_time_s = time.time() - start
+        if self.model.status == GRB.TIME_LIMIT:
+            self.running_time_s = _GUROBITIMELIMIT_S
+        else:
+            self.running_time_s = time.time() - start
         self.optimal = self.model.status == GRB.OPTIMAL
         solution = FLSolution()
         state = CCTState()
@@ -353,6 +358,7 @@ class CCTAlgorithm(IFLSolver):
         self.state.update(self.offline_instance, service_cost=service_cost)
 
     def single_iteration(self) -> None:
+        start = time.time()
         _LOGGER.log_bodydebug(f"Starting iteration at time {self.state.t_index}")
         self.state.update(self.offline_instance)
         nobuild_service_cost = self.state.compute_service_cost()
@@ -363,6 +369,7 @@ class CCTAlgorithm(IFLSolver):
             self.add_facility()
         else:
             self.no_facility_update(nobuild_service_cost)
+        self.state.add_iteration_time(time.time() - start)
 
     def solve(self, instance: FLOfflineInstance) -> FLSolution:
         if not self.state.is_set:

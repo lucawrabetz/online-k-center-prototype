@@ -1,15 +1,15 @@
 import os
+import csv
 import pandas as pd
 import logging
 from typing import Dict, List, Any
-from allowed_types import FLInstanceType, FLSolverType
-from allowed_types import _OMIP, _SOMIP, _CCTA
+from allowed_types import FLInstanceType, FLSolverType, _OMIP, _SOMIP, _CCTA
 from problem import FLOfflineInstance, FLSolution
 from solvers import IFLSolver, OfflineMIP, SemiOfflineMIP, CCTAlgorithm, _SOLVER_FACTORY
-from data_model import _DATA_MODEL, OBJECTIVE, TIME
+from data_model import RUN_ID, _DATA_MODEL, OBJECTIVE, TIME, get_next_run_id
 from feature_interface import IFeature
 from log_config import _LOGGER, throwaway_gurobi_model
-from util import _DAT
+from util import _DAT, _FINALDB, _SERVICEDB, _TIMEDB
 
 
 class OutputRow:
@@ -17,10 +17,15 @@ class OutputRow:
         self.row: Dict[IFeature, Any] = row if row is not None else {}
 
     def from_run(
-        self, instance: FLOfflineInstance, solver: IFLSolver, solution: FLSolution
+        self,
+        run_id: int,
+        instance: FLOfflineInstance,
+        solver: IFLSolver,
+        solution: FLSolution,
     ) -> None:
         self.row = {}
-        # TODO...
+        # TODO... so hacky, everything clicks if you add a new feature to data model except for this
+        self.row[RUN_ID] = run_id
         for feature in _DATA_MODEL.features:
             if feature.name == "set_name":
                 self.row[feature] = instance.id.set_name
@@ -29,8 +34,10 @@ class OutputRow:
             elif feature.name == "id":
                 # TODO: refactor id.id to <something_else>.id throughout codebase
                 self.row[feature] = instance.id.id
-            elif feature.name == "time_periods":
+            elif feature.name == "T":
                 self.row[feature] = instance.id.T
+            elif feature.name == "Gamma":
+                self.row[feature] = instance.Gamma
             elif feature.name == "solver":
                 self.row[feature] = solver.id.name
             elif feature.name == "objective":
@@ -43,12 +50,8 @@ class OutputRow:
                 self.row[feature] = solution.running_time_ms
             elif feature.name == "time_s":
                 self.row[feature] = solution.running_time_s
-
-    def series(self) -> pd.Series:
-        data = {}
-        for feature, value in self.row.items():
-            data[feature.name] = value
-        return pd.Series(data)
+            elif feature.name == "it_time_ms":
+                self.row[feature] = solution.iteration_time_ms
 
     def validate(self) -> bool:
         return True
@@ -61,59 +64,47 @@ class OutputTable:
     def add_row(self, row: OutputRow) -> None:
         if not row.validate():
             raise ValueError("Row is not valid")
-        self.rows.append(row.series())
+        self.rows.append(row)
 
     def dataframe(self) -> pd.DataFrame:
-        data = {}
+        series_data = []
         for row in self.rows:
+            data = {}
             for feature, value in row.row.items():
                 data[feature.name] = value
-        return pd.DataFrame(self.rows)
+            series_data.append(pd.Series(data))
+        return pd.DataFrame(series_data)
 
 
 class CSVWrapper:
-    def __init__(self, path: str) -> None:
+    def __init__(self, path: str = _FINALDB) -> None:
         self.path: str = path
 
-    def write_line(self, table: OutputTable) -> None:
-        table.dataframe().to_csv(self.path, index=False)
+    def write_table(self, table: OutputTable) -> None:
+        # TODO: port in and refactor from "sheet_cat.py" in ARSPI.
+        new_df = table.dataframe()
+        if os.path.exists(self.path):
+            existing_df = pd.read_csv(self.path)
+            if existing_df.shape[0] == 0:
+                new_df.to_csv(self.path, index=False)
+            if set(existing_df.columns) == set(new_df.columns):
+                new_df.to_csv(self.path, mode="a", header=False, index=False)
+            else:
+                # Existing dataframe has data and columns do not match, raise an error
+                raise ValueError("Columns do not match. Cannot append to the CSV file.")
+        else:
+            new_df.to_csv(self.path, index=False)
 
 
-class FLRuns:
-    def __init__(
-        self, instance_id: FLInstanceType, solver_ids: List[FLSolverType]
-    ) -> None:
-        self.instance_id: FLInstanceType = instance_id
-        self.solver_ids: List[FLSolverType] = solver_ids
+class HorizonCSVWrapper:
+    def __init__(self, path: str = _SERVICEDB) -> None:
+        self.path: str = path
 
-    def single_run(
-        self, solver_id: FLSolverType, instance: FLOfflineInstance
-    ) -> OutputRow:
-        solver = _SOLVER_FACTORY.solver(solver_id)
-        solver.configure_solver(instance)
-        solution: FLSolution = solver.solve(instance)
-        row = OutputRow()
-        row.from_run(instance, solver, solution)
-        return row
-
-    def run(self) -> OutputTable:
-        instance = FLOfflineInstance(self.instance_id)
-        instance.read()
-        table = OutputTable()
-        _LOGGER.log_body(
-            f"Running solvers {', '.join([s.name for s in self.solver_ids])} on instance {self.instance_id.file_path()}"
-        )
-        summary: List[str] = []
-        _LOGGER.separator_line()
-        for solver_id in self.solver_ids:
-            row = self.single_run(solver_id, instance)
-            table.add_row(row)
-            summary.append(
-                f"{solver_id.name}: {row.row[OBJECTIVE]}, time (ms): {row.row[TIME]}"
-            )
-        _LOGGER.log_body("; ".join(summary))
-        _LOGGER.separator_line()
-        return table
+    def write_horizon(self, horizon: List[Any], run_id: int) -> None:
+        with open(self.path, "a", newline="") as file:
+            writer = csv.writer(file)
+            row = [run_id] + horizon
+            writer.writerow(row)
 
 
 class FLExperiment:
@@ -123,6 +114,10 @@ class FLExperiment:
         self.instance_ids: List[FLInstanceType] = []
         self.solver_ids: List[FLSolverType] = []
         self.solvers: List[IFLSolver] = []
+        self.csv_wrapper: CSVWrapper = CSVWrapper()
+        self.service_wrapper: HorizonCSVWrapper = HorizonCSVWrapper()
+        self.time_wrapper: HorizonCSVWrapper = HorizonCSVWrapper(_TIMEDB)
+        self.run_id: int = get_next_run_id()
         throwaway_gurobi_model()
         _LOGGER.clear_page()
 
@@ -135,7 +130,7 @@ class FLExperiment:
         """
         initially:
             instances: just all files in directory dat/set_name
-            solvers: passed explicitly or just stmip
+            solvers: passed explicitly or just fully offline mip
         """
         filenames = os.listdir(self.data_path)
         for filename in filenames:
@@ -147,13 +142,47 @@ class FLExperiment:
         else:
             self.solver_ids = [_OMIP]
 
-    def run(self):
+    def single_run(
+        self, solver_id: FLSolverType, instance: FLOfflineInstance
+    ) -> OutputRow:
+        solver = _SOLVER_FACTORY.solver(solver_id)
+        solver.configure_solver(instance)
+        solution: FLSolution = solver.solve(instance)
+        row = OutputRow()
+        row.from_run(self.run_id, instance, solver, solution)
+        self.service_wrapper.write_horizon(solution.service_costs, self.run_id)
+        if solver_id == _CCTA:
+            self.time_wrapper.write_horizon(solution.iteration_time_ms, self.run_id)
+        self.run_id += 1
+        return row
+
+    def run(self) -> None:
         _LOGGER.log_header(f"Running experiment for set {self.set_name}")
         for instance_id in self.instance_ids:
-            _LOGGER.log_subheader(
-                f"Running for instance {instance_id.file_path()}  ---> T = {instance_id.T}, n = {instance_id.n}"
-            )
-            # in here will require some sort of registry
-            # solver id -> factory method to construct solver
-            run = FLRuns(instance_id, self.solver_ids)
-            table = run.run()
+            instance = FLOfflineInstance(instance_id)
+            instance.read()
+            table = OutputTable()
+            if len(self.solver_ids) == 1:
+                _LOGGER.log_body(
+                    f"Running solver {self.solver_ids[0].name} on instance {instance_id.file_path}"
+                )
+            else:
+                _LOGGER.log_body(
+                    f"Running solvers {', '.join([s.name for s in self.solver_ids])} on instance {instance_id.file_path}"
+                )
+            summary: List[str] = []
+            _LOGGER.separator_line()
+            for solver_id in self.solver_ids:
+                row = self.single_run(solver_id, instance)
+                table.add_row(row)
+                summary.append(
+                    f"{solver_id.name}: {row.row[OBJECTIVE]}, time (ms): {row.row[TIME]}"
+                )
+            _LOGGER.log_body("; ".join(summary))
+            self.csv_wrapper.write_table(table)
+            _LOGGER.separator_line()
+            # _LOGGER.log_subheader(
+            #     f"Running for instance {instance_id.file_path}  ---> T = {instance_id.T}, n = {instance_id.n}"
+            # )
+            # run = FLRuns(instance_id, self.solver_ids, self.csv_wrapper)
+            # table = run.run()

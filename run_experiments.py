@@ -1,7 +1,7 @@
 import logging
 from argparse import ArgumentParser
 from experiments import FLExperiment
-from allowed_types import _SOLVERS
+from allowed_types import _SOLVERS, _CCTA
 
 from log_config import setup_logging, _LOGGER
 
