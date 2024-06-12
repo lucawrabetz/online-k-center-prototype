@@ -9,7 +9,7 @@ from solvers import IFLSolver, OfflineMIP, SemiOfflineMIP, CCTAlgorithm, _SOLVER
 from data_model import RUN_ID, _DATA_MODEL, OBJECTIVE, TIME, get_next_run_id
 from feature_interface import IFeature
 from log_config import _LOGGER, throwaway_gurobi_model
-from util import _DAT, _FINALDB, _SERVICEDB, _TIMEDB
+from util import _DAT, _FINALDB, _SERVICEDB, _TIMEDB, _FACILITIESDB
 
 
 class OutputRow:
@@ -59,6 +59,10 @@ class OutputRow:
                 self.row[feature] = solution.running_time_s
             elif feature.name == "it_time_ms":
                 self.row[feature] = solution.iteration_time_ms
+            elif feature.name == "num_facilities":
+                self.row[feature] = solution.num_facilities
+            elif feature.name == "facilities_str":
+                self.row[feature] = solution.facilities_str
 
     def validate(self) -> bool:
         return True
@@ -124,6 +128,7 @@ class FLExperiment:
         self.csv_wrapper: CSVWrapper = CSVWrapper()
         self.service_wrapper: HorizonCSVWrapper = HorizonCSVWrapper()
         self.time_wrapper: HorizonCSVWrapper = HorizonCSVWrapper(_TIMEDB)
+        self.facilities_wrapper: HorizonCSVWrapper = HorizonCSVWrapper(_FACILITIESDB)
         self.run_id: int = get_next_run_id()
         self.gamma: float = -1.0
         throwaway_gurobi_model()
@@ -165,6 +170,9 @@ class FLExperiment:
         row = OutputRow()
         row.from_run(self.run_id, instance, solver, solution)
         self.service_wrapper.write_horizon(solution.service_costs, self.run_id)
+        # if _SOMIP or _CCTA, facilities are a full time horizon
+        # if _OMIP, facilities are the final facilities
+        self.facilities_wrapper.write_horizon(solution.facilities, self.run_id)
         if solver_id == _CCTA:
             self.time_wrapper.write_horizon(solution.iteration_time_ms, self.run_id)
         self.run_id += 1

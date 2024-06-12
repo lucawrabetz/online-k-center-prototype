@@ -372,6 +372,7 @@ class FLSolution(Data):
         self.unbounded: bool = False
         self.num_facilities: int = 0
         self.facilities: List[int] = []
+        self.facilities_str: str = ""
         self.distance_to_closest_facility: List[float] = []
         self.service_costs: List[float] = []
         self.solver: str = ""
@@ -411,6 +412,15 @@ class FLSolution(Data):
     def set_solver(self, solver: str) -> None:
         self.solver = solver
 
+    def facility_to_str(self) -> None:
+        """
+        Works for both the full time horizon and the final facilities.
+        """
+        self.facilities_str = "0"
+        for facility in self.facilities:
+            if facility > 0:
+                self.facilities_str += f"-{facility}"
+
     def from_cvtca(
         self, state: CCTState, time: float, optimal: bool, solver: str
     ) -> None:
@@ -421,6 +431,7 @@ class FLSolution(Data):
         self.objective = state.objective
         self.num_facilities = state.num_facilities
         self.facilities = state.facilities
+        self.facility_to_str()
         self.distance_to_closest_facility = state.distance_to_closest_facility
         self.service_costs = state.service_costs
         self.iteration_time_ms = state.iteration_time_ms

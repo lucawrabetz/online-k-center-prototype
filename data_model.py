@@ -45,6 +45,8 @@ OPTIMAL = IFeature("optimal", "OPTIMAL", str, "Optimal", "Opt")
 TIME = IFeature("time", 0.0, float, "Running Time (ms)", "T (ms)")
 TIME_S = IFeature("time_s", 0.0, float, "Running Time (s)", "T (s)")
 IT_TIME = IFeature("it_time", -1.0, float, "Iteration Time (ms)", "It T (ms)")
+NUM_FACILITIES = IFeature("num_facilities", 0, int, "Number of Facilities", "K")
+FACILITIES_STR = IFeature("facilities_str", "0", str, "Facilities", "Fac")
 
 features = [
     SET_NAME,
@@ -61,5 +63,7 @@ features = [
     TIME,
     TIME_S,
     IT_TIME,
+    NUM_FACILITIES,
+    FACILITIES_STR,
 ]
 _DATA_MODEL = DataModel(features)
