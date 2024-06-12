@@ -427,7 +427,6 @@ class FLSolution(Data):
         self.n = state.n
         self.T = state.T
         self.Gamma = state.Gamma
-        state.set_final_objective()
         self.objective = state.objective
         self.num_facilities = state.num_facilities
         self.facilities = state.facilities

@@ -5,7 +5,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import List, Any, Tuple, Dict
 from log_config import gurobi_log_file, _LOGGER
-from util import append_date
+from util import append_date, _EPSILON
 from allowed_types import FLSolverType, _OMIP, _SOMIP, _CCTA, _SOLVERS
 from problem import FLOfflineInstance, FLSolution, CCTState
 from gurobipy import Model, GRB, quicksum
@@ -80,6 +80,11 @@ class IFLMIP(IFLSolver):
         solution = FLSolution()
         state = CCTState()
         state.bare_final_state(instance, self.final_facilities_service_costs())
+        state.set_final_objective()
+        if state.objective - self.model.objVal > _EPSILON:
+            raise ValueError(
+                f"Objective mismatch: {state.objective} vs {self.model.objVal}"
+            )
         solution.from_cvtca(state, self.running_time_s, self.optimal, self.id.name)
         return solution
 
@@ -382,6 +387,7 @@ class CCTAlgorithm(IFLSolver):
                 f"Iteration time (ms): {(time.time() - it_start) * 1000}"
             )
         self.running_time_s = time.time() - start
+        self.state.set_final_objective()
         self.optimal = False
         solution = FLSolution()
         solution.from_cvtca(self.state, self.running_time_s, self.optimal, self.id.name)
