@@ -6,7 +6,14 @@ from typing import Dict, List, Any
 from allowed_types import FLInstanceType, FLSolverType, _OMIP, _SOMIP, _CCTA
 from problem import FLOfflineInstance, FLSolution
 from solvers import IFLSolver, OfflineMIP, SemiOfflineMIP, CCTAlgorithm, _SOLVER_FACTORY
-from data_model import RUN_ID, _DATA_MODEL, OBJECTIVE, TIME, get_next_run_id
+from data_model import (
+    RUN_ID,
+    _DATA_MODEL,
+    OBJECTIVE,
+    TIME,
+    NUM_FACILITIES,
+    get_next_run_id,
+)
 from feature_interface import IFeature
 from log_config import _LOGGER, throwaway_gurobi_model
 from util import _DAT, _FINALDB, _SERVICEDB, _TIMEDB, _FACILITIESDB
@@ -205,7 +212,7 @@ class FLExperiment:
                 row = self.single_run(solver_id, instance)
                 table.add_row(row)
                 summary.append(
-                    f"{solver_id.name}: {row.row[OBJECTIVE]}, time (ms): {row.row[TIME]}"
+                    f"{solver_id.name}: {row.row[OBJECTIVE]} ({row.row[NUM_FACILITIES]}F), time (ms): {row.row[TIME]}"
                 )
             _LOGGER.log_body("; ".join(summary))
             self.csv_wrapper.write_table(table)
