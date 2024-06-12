@@ -184,23 +184,6 @@ class OfflineMIP(IFLMIP):
 
         return (facilities, service_costs)
 
-    def solve(self, instance: FLOfflineInstance) -> FLSolution:
-        """Solve model."""
-        start = time.time()
-        self.model.optimize()
-        self.running_time_s = time.time() - start
-        self.optimal = self.model.status == GRB.OPTIMAL
-        solution = FLSolution()
-        state = CCTState()
-        state.bare_final_state(instance, self.final_facilities_service_costs())
-        solution.from_cvtca(state, self.running_time_s, self.optimal, self.id.name)
-        return solution
-
-    def write_model(self) -> None:
-        """Write model to file."""
-        filename = append_date(self.id.name) + ".lp"
-        self.model.write(filename)
-
 
 class SemiOfflineMIP(IFLMIP):
     def __init__(self) -> None:
