@@ -2,9 +2,9 @@ import os
 import csv
 import pandas as pd
 import logging
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Callable
 from allowed_types import FLInstanceType, FLSolverType, _OMIP, _SOMIP, _CCTA
-from problem import FLOfflineInstance, FLSolution
+from problem import FLOfflineInstance, FLSolution, DPoint, euclidean_distance
 from solvers import IFLSolver, OfflineMIP, SemiOfflineMIP, CCTAlgorithm, _SOLVER_FACTORY
 from data_model import (
     RUN_ID,
@@ -126,7 +126,12 @@ class HorizonCSVWrapper:
 
 
 class FLExperiment:
-    def __init__(self, set_name: str) -> None:
+    def __init__(
+        self,
+        set_name: str,
+        distance: Callable[[DPoint, DPoint], float] = euclidean_distance,
+        write: bool = True,
+    ) -> None:
         self.set_name: str = set_name
         self.data_path: str = os.path.join(_DAT, set_name)
         self.instance_ids: List[FLInstanceType] = []
@@ -138,6 +143,8 @@ class FLExperiment:
         self.facilities_wrapper: HorizonCSVWrapper = HorizonCSVWrapper(_FACILITIESDB)
         self.run_id: int = get_next_run_id()
         self.gamma: float = -1.0
+        self.distance = distance
+        self.write: bool = write
         throwaway_gurobi_model()
         _LOGGER.clear_page()
 
@@ -195,16 +202,17 @@ class FLExperiment:
             f"Running experiment for set {self.set_name} with {gamma_str} gamma"
         )
         for instance_id in self.instance_ids:
-            instance = FLOfflineInstance(instance_id)
+            instance = FLOfflineInstance(instance_id, distance=self.distance)
             instance.read()
             table = OutputTable()
+            distance_name = self.distance.__name__.split("_")[0]
             if len(self.solver_ids) == 1:
                 _LOGGER.log_body(
-                    f"Running solver {self.solver_ids[0].name} on instance {instance_id.file_path}"
+                    f"Running solver {self.solver_ids[0].name} on instance {instance_id.file_path} with distance function {distance_name}"
                 )
             else:
                 _LOGGER.log_body(
-                    f"Running solvers {', '.join([s.name for s in self.solver_ids])} on instance {instance_id.file_path}"
+                    f"Running solvers {', '.join([s.name for s in self.solver_ids])} on instance {instance_id.file_path} with distance function {distance_name}"
                 )
             summary: List[str] = []
             _LOGGER.separator_line()

@@ -49,12 +49,20 @@ def euclidean_distance(point_a: DPoint, point_b: DPoint) -> float:
     return np.linalg.norm(point_a.x - point_b.x)
 
 
+def taxicab_distance(point_a: DPoint, point_b: DPoint) -> float:
+    return np.linalg.norm(point_a.x - point_b.x, ord=1)
+
+
 class FLOfflineInstance(Data):
     """
     Class to hold offline instance data for the online min max center problem.
     """
 
-    def __init__(self, instance_id: FLInstanceType = _TEST_SHAPE) -> None:
+    def __init__(
+        self,
+        instance_id: FLInstanceType = _TEST_SHAPE,
+        distance: Callable[[DPoint, DPoint], float] = euclidean_distance,
+    ) -> None:
         super().__init__()
         self.id: FLInstanceType = instance_id
         self.points: List[DPoint] = [
@@ -70,7 +78,7 @@ class FLOfflineInstance(Data):
         self.original_Gamma: float = 0.0
         self.set_Gamma: float = -1.0
         self.distances: np.ndarray = np.zeros((self.id.T + 1, self.id.T + 1))
-        self.distance: Callable[[DPoint, DPoint], float] = euclidean_distance
+        self.distance: Callable[[DPoint, DPoint], float] = distance
 
     def set_distance_matrix(self) -> None:
         """

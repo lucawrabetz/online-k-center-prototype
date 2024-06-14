@@ -95,9 +95,9 @@ def main():
     parser.add_argument("--set_name", type=str, default="test")
     set_name = parser.parse_args().set_name
     _LOGGER.log_header(f"Generating testbed {set_name}")
-    num_instances = 30
-    dimensions = [10]
-    time_periods = [1000]
+    num_instances = 3
+    dimensions = [2]
+    time_periods = [50]
     ids = id_factory(set_name, dimensions, time_periods)
     generator = TestbedGenerator(set_name, num_instances, ids)
     generator.write()
