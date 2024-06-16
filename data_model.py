@@ -1,5 +1,5 @@
 import pandas as pd
-from typing import Any, List
+from typing import Any, List, Dict
 from feature_interface import IFeature
 from util import _FINALDB
 from allowed_types import FLSolverType, _OMIP, _SOLVERS
@@ -18,7 +18,10 @@ def get_next_run_id() -> int:
 
 class DataModel:
     def __init__(self, features: List[IFeature]) -> None:
-        self.features: List[IFeature] = features
+        self.features: Dict[str, IFeature] = {
+            feature.name: feature for feature in features
+        }
+        # self.features: List[IFeature] = features
 
 
 # Instance parameter features
@@ -42,8 +45,10 @@ SOLVER = IFeature("solver", _OMIP, FLSolverType, "Solver", "Sol", _SOLVERS)
 OBJECTIVE = IFeature("objective", 0.0, float, "Objective", "Obj")
 UNBOUNDED = IFeature("unbounded", "NOT_UNBOUNDED", str, "Unbounded", "Unb")
 OPTIMAL = IFeature("optimal", "OPTIMAL", str, "Optimal", "Opt")
-TIME = IFeature("time", 0.0, float, "Running Time (ms)", "T (ms)")
-TIME_S = IFeature("time_s", 0.0, float, "Running Time (s)", "T (s)")
+# unspecified time is in ms
+# TODO: refactor time type
+TIME = IFeature("time", -1.0, float, "Running Time (ms)", "T (ms)")
+TIME_S = IFeature("time_s", -1.0, float, "Running Time (s)", "T (s)")
 IT_TIME = IFeature("it_time", -1.0, float, "Iteration Time (ms)", "It T (ms)")
 NUM_FACILITIES = IFeature("num_facilities", 0, int, "Number of Facilities", "K")
 FACILITIES_STR = IFeature("facilities_str", "0", str, "Facilities", "Fac")
@@ -65,5 +70,23 @@ features = [
     IT_TIME,
     NUM_FACILITIES,
     FACILITIES_STR,
+]
+_COLUMN_INDEX = [
+    RUN_ID.name,
+    SET_NAME.name,
+    DIMENSION.name,
+    ID.name,
+    TIME_PERIODS.name,
+    TIME_PERIODS_RUN.name,
+    GAMMA.name,
+    GAMMA_RUN.name,
+    SOLVER.name,
+    OBJECTIVE.name,
+    UNBOUNDED.name,
+    OPTIMAL.name,
+    TIME.name,
+    IT_TIME.name,
+    NUM_FACILITIES.name,
+    FACILITIES_STR.name,
 ]
 _DATA_MODEL = DataModel(features)

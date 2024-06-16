@@ -4,7 +4,7 @@ import numpy as np
 from typing import Callable, List, Tuple
 from util import Data, _DAT
 from log_config import _LOGGER
-from allowed_types import FLInstanceType, _TEST_SHAPE
+from allowed_types import FLInstanceType, _TEST_SHAPE, _CCTA
 
 
 class DPoint:
@@ -73,10 +73,13 @@ class FLOfflineInstance(Data):
         # self.original_Gamma is the original value, i.e. the one written to the instance file.
         # self.set_Gamma is the value of gamma set manually for an experiment that is run with a different value than on file.
         # data functionality should look at set_Gamma when looking for the run parameter, and original_Gamma when looking for the instance parameter.
-        # self.Gamma should always equal at least one of set and original.
+        # self.Gamma should always equal at least one of set and original - it is used in algorithm functionality
         self.Gamma: float = 0.0
         self.original_Gamma: float = 0.0
         self.set_Gamma: float = -1.0
+        # same system as for gamma for T
+        self.first_T(self.id.T)
+        self.set_T: int = -1
         self.distances: np.ndarray = np.zeros((self.id.T + 1, self.id.T + 1))
         self.distance: Callable[[DPoint, DPoint], float] = distance
 
@@ -97,6 +100,20 @@ class FLOfflineInstance(Data):
         Return distance between points i and j.
         """
         return self.distances[i][j]
+
+    def first_T(self, T: int) -> None:
+        self.original_T = T
+        self.T = T
+
+    def new_active_T(self, T: int) -> None:
+        """
+        "slice" the points and distances to the new T, destroying the rest of the data (it is available in the file, and the assumption is that instances are constructed to be used for a single T, and we also prioritize the memory conditions during the experiment)
+        """
+        self.set_T = T
+        self.T = T
+        self.id.T = T
+        self.points = self.points[: T + 1]
+        self.distances = self.distances[: T + 1, : T + 1]
 
     def first_gamma(self, Gamma: float) -> None:
         self.original_Gamma = Gamma
@@ -129,6 +146,20 @@ class FLOfflineInstance(Data):
         if Gamma < 0:
             raise ValueError("Gamma must be non-negative.")
         self.new_active_gamma(Gamma)
+
+    def set_T_run(self, T: int):
+        """
+        Also changes self.T, so we don't need to change any functionality outside of it based on whether gamma was manually set. But we know it was if set_T == T, or by checking that self.set_T >= 0.
+        When we change T run, we also need to change the size of the following members, so that they are consistent with the new T and any solvers etc. constructed with this instance use data of the correct size:
+            - self.points
+            - self.distances
+        do this in new_active_T
+        """
+        if T < 0:
+            raise ValueError("T must be non-negative.")
+        if T > self.original_T:
+            raise ValueError("T must be less than or equal to the original T.")
+        self.new_active_T(T)
 
     def read_csv_file(self, file_path: str) -> Tuple[float, List[np.ndarray]]:
         with open(file_path, "r") as file:
@@ -203,7 +234,8 @@ class CCTState(Data):
         self.facilities: List[int] = []
         self.distance_to_closest_facility: List[float] = []
         self.service_costs: List[float] = []
-        self.iteration_time_ms: List[float] = []
+        self.iteration_times_ms: List[float] = []
+        self.average_iteration_time_ms: float = 0.0
 
     def configure_state(self, instance: FLOfflineInstance) -> None:
         """
@@ -217,7 +249,7 @@ class CCTState(Data):
         self.num_facilities = 1
         self.t_index = 1
         self.cum_var_cost = 0.0
-        self.iteration_time_ms = [0.0]
+        self.iteration_times_ms = [0.0]
         self.facilities = [
             -1 if t > 0 else 0 for t in range(self.T + 1)
         ]  # final decisions for each time period
@@ -230,7 +262,7 @@ class CCTState(Data):
         self._is_set = True
 
     def add_iteration_time(self, time: float) -> None:
-        self.iteration_time_ms.append(time * 1000)
+        self.iteration_times_ms.append(time * 1000)
 
     def update_distances_new_facility(
         self, instance: FLOfflineInstance, ell: int
@@ -375,7 +407,7 @@ class FLSolution(Data):
         self.objective_horizon: List[float] = []
         self.running_time_s: float = 0.0
         self.running_time_ms: float = 0.0
-        self.iteration_time_ms: List[float] = []
+        self.iteration_times_ms: List[float] = []
         self.optimal: bool = False
         self.unbounded: bool = False
         self.num_facilities: int = 0
@@ -441,7 +473,13 @@ class FLSolution(Data):
         self.facility_to_str()
         self.distance_to_closest_facility = state.distance_to_closest_facility
         self.service_costs = state.service_costs
-        self.iteration_time_ms = state.iteration_time_ms
+        self.iteration_times_ms = state.iteration_times_ms
+        if solver == _CCTA.name:
+            self.average_iteration_time_ms = sum(state.iteration_times_ms) / len(
+                state.iteration_times_ms
+            )
+        else:
+            self.average_iteration_time_ms = -1.0
         self.set_running_time(time)
         self.set_optimal(optimal)
         self.set_solver(solver)

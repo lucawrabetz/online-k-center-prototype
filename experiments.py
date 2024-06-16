@@ -33,8 +33,8 @@ class OutputRow:
         self.row = {}
         # TODO... so hacky, everything clicks if you add a new feature to data model except for this
         self.row[RUN_ID] = run_id
-        for feature in _DATA_MODEL.features:
-            if feature.name == "set_name":
+        for name, feature in _DATA_MODEL.features.items():
+            if name == "set_name":
                 self.row[feature] = instance.id.set_name
             elif feature.name == "n":
                 self.row[feature] = instance.id.n
@@ -42,10 +42,10 @@ class OutputRow:
                 # TODO: refactor id.id to <something_else>.id throughout codebase
                 self.row[feature] = instance.id.id
             elif feature.name == "T":
-                self.row[feature] = instance.id.T
+                self.row[feature] = instance.original_T
             elif feature.name == "T_run":
                 # TODO: add solver suite functionality for decoupled T_run, and refactor gamma_run and T_run
-                self.row[feature] = -1
+                self.row[feature] = instance.set_T
             # Workflow for decoupled run / instance parameter.
             # Defaulting the decoupled run proxy to -1 essentially takes care of everything. Original parameter (gamma) is updated if the run parameter is set, so all functionality still calls gamma and works for the run. We achieve this by maintaining 3 gamma attributes on the problem class because gamma is a "decoupled parameter", so one attribute is for the instance parameter, one is for the run_parameter when the instance is being used for a run, and one is for actual run functionality (which we don't look at here.)
             elif feature.name == "Gamma_run":
@@ -64,8 +64,8 @@ class OutputRow:
                 self.row[feature] = solution.running_time_ms
             elif feature.name == "time_s":
                 self.row[feature] = solution.running_time_s
-            elif feature.name == "it_time_ms":
-                self.row[feature] = solution.iteration_time_ms
+            elif feature.name == "it_time":
+                self.row[feature] = solution.average_iteration_time_ms
             elif feature.name == "num_facilities":
                 self.row[feature] = solution.num_facilities
             elif feature.name == "facilities_str":
@@ -143,6 +143,7 @@ class FLExperiment:
         self.facilities_wrapper: HorizonCSVWrapper = HorizonCSVWrapper(_FACILITIESDB)
         self.run_id: int = get_next_run_id()
         self.gamma: float = -1.0
+        self.T: int = -1
         self.distance = distance
         self.write: bool = write
         throwaway_gurobi_model()
@@ -153,6 +154,7 @@ class FLExperiment:
         instance_ids: List[FLInstanceType] = None,
         solver_ids: List[FLSolverType] = None,
         gamma: float = None,
+        T: int = None,
         params: Any = None,
     ):
         """
@@ -172,12 +174,16 @@ class FLExperiment:
             self.solver_ids = [_OMIP]
         if gamma is not None:
             self.gamma = gamma
+        if T is not None:
+            self.T = T
 
     def single_run(
         self, solver_id: FLSolverType, instance: FLOfflineInstance
     ) -> OutputRow:
         if self.gamma >= 0:
             instance.set_gamma_run(self.gamma)
+        if self.T >= 0:
+            instance.set_T_run(self.T)
         solver = _SOLVER_FACTORY.solver(solver_id)
         solver.configure_solver(instance)
         solution: FLSolution = solver.solve(instance)
@@ -188,18 +194,23 @@ class FLExperiment:
         # if _OMIP, facilities are the final facilities
         self.facilities_wrapper.write_horizon(solution.facilities, self.run_id)
         if solver_id == _CCTA:
-            self.time_wrapper.write_horizon(solution.iteration_time_ms, self.run_id)
+            self.time_wrapper.write_horizon(solution.iteration_times_ms, self.run_id)
         self.run_id += 1
         return row
 
     def run(self) -> None:
         gamma_str: str = ""
+        T_str = ""
         if self.gamma >= 0:
             gamma_str = str(self.gamma)
         else:
             gamma_str = "instance"
+        if self.T >= 0:
+            T_str = str(self.T)
+        else:
+            T_str = "instance"
         _LOGGER.log_header(
-            f"Running experiment for set {self.set_name} with {gamma_str} gamma"
+            f"Running experiment for set {self.set_name} with {gamma_str} gamma and {T_str} T"
         )
         for instance_id in self.instance_ids:
             instance = FLOfflineInstance(instance_id, distance=self.distance)
