@@ -346,6 +346,7 @@ class CCTAlgorithm(IFLSolver):
         self.state.update(self.offline_instance, service_cost=service_cost)
 
     def single_iteration(self) -> None:
+        # time.time() returns time in seconds since epoch
         start = time.time()
         _LOGGER.log_bodydebug(f"Starting iteration at time {self.state.t_index}")
         self.state.update(self.offline_instance)
@@ -362,6 +363,7 @@ class CCTAlgorithm(IFLSolver):
     def solve(self, instance: FLOfflineInstance) -> FLSolution:
         if not self.state.is_set:
             raise ValueError("Solver must be configured before solving.")
+        # time.time() returns time in seconds since epoch
         start = time.time()
         while self.state.t_index <= self.T:
             it_start = time.time()

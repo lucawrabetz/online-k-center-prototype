@@ -33,8 +33,8 @@ class OutputRow:
         self.row = {}
         # TODO... so hacky, everything clicks if you add a new feature to data model except for this
         self.row[RUN_ID] = run_id
-        for feature in _DATA_MODEL.features:
-            if feature.name == "set_name":
+        for name, feature in _DATA_MODEL.features.items():
+            if name == "set_name":
                 self.row[feature] = instance.id.set_name
             elif feature.name == "n":
                 self.row[feature] = instance.id.n
@@ -64,8 +64,8 @@ class OutputRow:
                 self.row[feature] = solution.running_time_ms
             elif feature.name == "time_s":
                 self.row[feature] = solution.running_time_s
-            elif feature.name == "it_time_ms":
-                self.row[feature] = solution.iteration_time_ms
+            elif feature.name == "it_time":
+                self.row[feature] = solution.average_iteration_time_ms
             elif feature.name == "num_facilities":
                 self.row[feature] = solution.num_facilities
             elif feature.name == "facilities_str":
@@ -194,7 +194,7 @@ class FLExperiment:
         # if _OMIP, facilities are the final facilities
         self.facilities_wrapper.write_horizon(solution.facilities, self.run_id)
         if solver_id == _CCTA:
-            self.time_wrapper.write_horizon(solution.iteration_time_ms, self.run_id)
+            self.time_wrapper.write_horizon(solution.iteration_times_ms, self.run_id)
         self.run_id += 1
         return row
 

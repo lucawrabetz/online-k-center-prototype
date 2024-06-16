@@ -4,7 +4,7 @@ import numpy as np
 from typing import Callable, List, Tuple
 from util import Data, _DAT
 from log_config import _LOGGER
-from allowed_types import FLInstanceType, _TEST_SHAPE
+from allowed_types import FLInstanceType, _TEST_SHAPE, _CCTA
 
 
 class DPoint:
@@ -234,7 +234,8 @@ class CCTState(Data):
         self.facilities: List[int] = []
         self.distance_to_closest_facility: List[float] = []
         self.service_costs: List[float] = []
-        self.iteration_time_ms: List[float] = []
+        self.iteration_times_ms: List[float] = []
+        self.average_iteration_time_ms: float = 0.0
 
     def configure_state(self, instance: FLOfflineInstance) -> None:
         """
@@ -248,7 +249,7 @@ class CCTState(Data):
         self.num_facilities = 1
         self.t_index = 1
         self.cum_var_cost = 0.0
-        self.iteration_time_ms = [0.0]
+        self.iteration_times_ms = [0.0]
         self.facilities = [
             -1 if t > 0 else 0 for t in range(self.T + 1)
         ]  # final decisions for each time period
@@ -261,7 +262,7 @@ class CCTState(Data):
         self._is_set = True
 
     def add_iteration_time(self, time: float) -> None:
-        self.iteration_time_ms.append(time * 1000)
+        self.iteration_times_ms.append(time * 1000)
 
     def update_distances_new_facility(
         self, instance: FLOfflineInstance, ell: int
@@ -406,7 +407,7 @@ class FLSolution(Data):
         self.objective_horizon: List[float] = []
         self.running_time_s: float = 0.0
         self.running_time_ms: float = 0.0
-        self.iteration_time_ms: List[float] = []
+        self.iteration_times_ms: List[float] = []
         self.optimal: bool = False
         self.unbounded: bool = False
         self.num_facilities: int = 0
@@ -472,7 +473,13 @@ class FLSolution(Data):
         self.facility_to_str()
         self.distance_to_closest_facility = state.distance_to_closest_facility
         self.service_costs = state.service_costs
-        self.iteration_time_ms = state.iteration_time_ms
+        self.iteration_times_ms = state.iteration_times_ms
+        if solver == _CCTA.name:
+            self.average_iteration_time_ms = sum(state.iteration_times_ms) / len(
+                state.iteration_times_ms
+            )
+        else:
+            self.average_iteration_time_ms = -1.0
         self.set_running_time(time)
         self.set_optimal(optimal)
         self.set_solver(solver)
