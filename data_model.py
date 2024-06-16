@@ -85,6 +85,7 @@ _COLUMN_INDEX = [
     UNBOUNDED.name,
     OPTIMAL.name,
     TIME.name,
+    TIME_S.name,
     IT_TIME.name,
     NUM_FACILITIES.name,
     FACILITIES_STR.name,
