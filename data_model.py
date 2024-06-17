@@ -21,7 +21,6 @@ class DataModel:
         self.features: Dict[str, IFeature] = {
             feature.name: feature for feature in features
         }
-        # self.features: List[IFeature] = features
 
 
 # Instance parameter features
@@ -85,7 +84,6 @@ _COLUMN_INDEX = [
     UNBOUNDED.name,
     OPTIMAL.name,
     TIME.name,
-    TIME_S.name,
     IT_TIME.name,
     NUM_FACILITIES.name,
     FACILITIES_STR.name,

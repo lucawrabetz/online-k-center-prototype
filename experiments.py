@@ -62,8 +62,6 @@ class OutputRow:
                 self.row[feature] = solution.optimal
             elif feature.name == "time":
                 self.row[feature] = solution.running_time_ms
-            elif feature.name == "time_s":
-                self.row[feature] = solution.running_time_s
             elif feature.name == "it_time":
                 self.row[feature] = solution.average_iteration_time_ms
             elif feature.name == "num_facilities":
@@ -109,6 +107,8 @@ class CSVWrapper:
                 new_df.to_csv(self.path, mode="a", header=False, index=False)
             else:
                 # Existing dataframe has data and columns do not match, raise an error
+                print(existing_df.columns)
+                print(new_df.columns)
                 raise ValueError("Columns do not match. Cannot append to the CSV file.")
         else:
             new_df.to_csv(self.path, index=False)
