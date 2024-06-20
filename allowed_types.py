@@ -4,6 +4,8 @@ from log_config import _LOGGER
 from typing import List, Dict, Any
 from util import _DAT
 
+# opti-face
+
 
 class FLSolverType:
     """
@@ -73,6 +75,8 @@ class FLInstanceType:
     def print(self) -> None:
         _LOGGER.log_body(f"n: {self.n}, T: {self.T}")
 
+
+# implementer
 
 _TEST_SHAPE = FLInstanceType()
 
