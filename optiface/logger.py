@@ -40,111 +40,116 @@ def setup_logging():
     setup_logfile()
 
 
-class InfoLogger:
-    INFO_CHARLEN: int = len("[INFO]: ")
-    DEBUG_CHARLEN: int = len("[DEBUG]: ")
-    WARN_CHARLEN: int = len("[WARNING]: ")
-    ERROR_CHARLEN: int = len("[ERROR]: ")
-    SPACE_INDENT: int = 4
-    FINAL_INDENT_CHARLEN: int = max(INFO_CHARLEN, DEBUG_CHARLEN) + SPACE_INDENT
-    INFO_INDENT: str = f"{' ' * (FINAL_INDENT_CHARLEN - INFO_CHARLEN)}-> "
-    DEBUG_INDENT: str = f"{' ' * (FINAL_INDENT_CHARLEN - DEBUG_CHARLEN)}>>>> "
-    WARN_INDENT: str = f"{' ' * (FINAL_INDENT_CHARLEN - WARN_CHARLEN)}>>>> "
-    ERROR_INDENT: str = f"{' ' * (FINAL_INDENT_CHARLEN - ERROR_CHARLEN)}>>>> "
+_INFO_CHARLEN: int = len("[INFO]: ")
+_DEBUG_CHARLEN: int = len("[DEBUG]: ")
+_WARN_CHARLEN: int = len("[WARNING]: ")
+_ERROR_CHARLEN: int = len("[ERROR]: ")
+_SPACE_INDENT: int = 4
+_FINAL_INDENT_CHARLEN: int = max(_INFO_CHARLEN, _DEBUG_CHARLEN) + _SPACE_INDENT
+_INFO_INDENT: str = f"{' ' * (_FINAL_INDENT_CHARLEN - _INFO_CHARLEN)}-> "
+_DEBUG_INDENT: str = f"{' ' * (_FINAL_INDENT_CHARLEN - _DEBUG_CHARLEN)}>>>> "
+_WARN_INDENT: str = f"{' ' * (_FINAL_INDENT_CHARLEN - _WARN_CHARLEN)}>>>> "
+_ERROR_INDENT: str = f"{' ' * (_FINAL_INDENT_CHARLEN - _ERROR_CHARLEN)}>>>> "
+_SPECIAL_CHAR = "-"
+_PRECISION = 2
 
-    def __init__(self, logger=logging, special_char="-", precision=2):
-        self.logger = logger
-        self.special_char = special_char
-        self.precision = precision
 
-    def blank_line(self):
-        print()
+def blank_line():
+    print()
 
-    def separator_line(self):
-        terminal_width = shutil.get_terminal_size((80, 20)).columns
-        num_characters = terminal_width // 2
-        separator_line = (
-            f"{self.special_char} " * num_characters + f"{self.special_char}"
+
+def separator_line():
+    terminal_width = shutil.get_terminal_size((80, 20)).columns
+    num_characters = terminal_width // 2
+    separator_line = f"{_SPECIAL_CHAR} " * num_characters + f"{_SPECIAL_CHAR}"
+    print(separator_line)
+
+
+def separator_block():
+    separator_line()
+    separator_line()
+
+
+def clear_page():
+    for i in range(4):
+        blank_line()
+
+
+def format_numbers_in_string(msg: str) -> str:
+    if type(msg) != str:
+        logging.warning(
+            f"Expected string in format_numbers_in_string, got {type(msg)}. Cannot guarantee proper formatting."
         )
-        print(separator_line)
+        return msg
+    pattern = re.compile(r"(\d+\.\d+)")
 
-    def separator_block(self):
-        self.separator_line()
-        self.separator_line()
+    def repl(match):
+        return f"{float(match.group()):.{_PRECISION}f}"
 
-    def clear_page(self):
-        for i in range(4):
-            self.blank_line()
-
-    def format_numbers_in_string(self, msg: str) -> str:
-        if type(msg) != str:
-            logging.warning(
-                f"Expected string in format_numbers_in_string, got {type(msg)}. Cannot guarantee proper formatting."
-            )
-            return msg
-        pattern = re.compile(r"(\d+\.\d+)")
-
-        def repl(match):
-            return f"{float(match.group()):.{self.precision}f}"
-
-        return pattern.sub(repl, msg)
-
-    def log_matrix(self, matrix: np.ndarray, name: str, index: int = 0):
-        """
-        Prints a 2D numpy ndarray in a readable format with specified decimal places.
-
-        Parameters:
-        matrix (np.ndarray): 2D numpy array to be printed.
-        decimal_places (int): Number of decimal places for formatting the numbers.
-        """
-        if not isinstance(matrix, np.ndarray):
-            raise ValueError("Input must be a numpy ndarray.")
-        if matrix.ndim != 2:
-            raise ValueError("Input array must be 2-dimensional.")
-        self.log_debug(f"{name} matrix", ":")
-        for row in matrix:
-            formatted_row = []
-            for x in row:
-                formatted_row.append(str(x))
-            self.log_debug(" ".join(formatted_row), "")
-
-    def log_header(self, msg: str):
-        self.blank_line()
-        self.separator_block()
-        msg = self.format_numbers_in_string(msg)
-        logging.info(f"{msg}.")
-        self.separator_block()
-        self.blank_line()
-
-    def log_subheader(self, msg: str):
-        msg = self.format_numbers_in_string(msg)
-        self.blank_line()
-        logging.info(f"{msg}.")
-        self.blank_line()
-
-    def log_bodydebug(self, msg: str):
-        msg = self.format_numbers_in_string(msg)
-        logging.debug(f"{self.INFO_INDENT}{msg}.")
-
-    def log_body(self, msg: str):
-        msg = self.format_numbers_in_string(msg)
-        logging.info(f"{self.INFO_INDENT}{msg}.")
-
-    def log_special(self, msg: str):
-        msg = self.format_numbers_in_string(msg)
-        logging.info(f"--> {msg}! <--")
-
-    def log_debug(self, msg: str, final_punc: str = "."):
-        msg = self.format_numbers_in_string(msg)
-        logging.debug(f"{self.DEBUG_INDENT}{msg}{final_punc}")
-
-    def log_warning(self, msg: str, final_punc: str = "."):
-        msg = self.format_numbers_in_string(msg)
-        logging.warn(f"{self.WARN_INDENT}{msg}{final_punc}")
-
-    def log_error(self, msg: str, final_punc: str = "."):
-        msg = self.format_numbers_in_string(msg)
-        logging.error(f"{self.ERROR_INDENT}{msg}{final_punc}")
+    return pattern.sub(repl, msg)
 
 
-LOGGER = InfoLogger()
+def log_matrix(matrix: np.ndarray, name: str, index: int = 0):
+    """
+    Prints a 2D numpy ndarray in a readable format with specified decimal places.
+
+    Parameters:
+    matrix (np.ndarray): 2D numpy array to be printed.
+    decimal_places (int): Number of decimal places for formatting the numbers.
+    """
+    if not isinstance(matrix, np.ndarray):
+        raise ValueError("Input must be a numpy ndarray.")
+    if matrix.ndim != 2:
+        raise ValueError("Input array must be 2-dimensional.")
+    log_debug(f"{name} matrix", ":")
+    for row in matrix:
+        formatted_row = []
+        for x in row:
+            formatted_row.append(str(x))
+        log_debug(" ".join(formatted_row), "")
+
+
+def log_header(msg: str):
+    blank_line()
+    separator_block()
+    msg = format_numbers_in_string(msg)
+    logging.info(f"{msg}.")
+    separator_block()
+    blank_line()
+
+
+def log_subheader(msg: str):
+    msg = format_numbers_in_string(msg)
+    blank_line()
+    logging.info(f"{msg}.")
+    blank_line()
+
+
+def log_body(msg: str):
+    msg = format_numbers_in_string(msg)
+    logging.info(f"{_INFO_INDENT}{msg}.")
+
+
+def log_bodydebug(msg: str):
+    msg = format_numbers_in_string(msg)
+    logging.debug(f"{_INFO_INDENT}{msg}.")
+
+
+def log_debug(msg: str, final_punc: str = "."):
+    msg = format_numbers_in_string(msg)
+    logging.debug(f"{_DEBUG_INDENT}{msg}{final_punc}")
+
+
+def log_special(msg: str):
+    msg = format_numbers_in_string(msg)
+    logging.info(f"--> {msg}! <--")
+
+
+def log_warning(msg: str, final_punc: str = "."):
+    msg = format_numbers_in_string(msg)
+    logging.warn(f"{_WARN_INDENT}{msg}{final_punc}")
+
+
+def log_error(msg: str, final_punc: str = "."):
+    msg = format_numbers_in_string(msg)
+    logging.error(f"{_ERROR_INDENT}{msg}{final_punc}")
