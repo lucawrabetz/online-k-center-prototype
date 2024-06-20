@@ -1,8 +1,8 @@
-from setuptools import setup, find_packages
-from pathlib import Path
 import os
+from setuptools import find_packages, setup
+import pathlib
 
-readme_path = Path(os.path.join("..", "README.md"))
+readme_path = pathlib.Path(os.path.join("..", "README.md"))
 long_description = readme_path.read_text() if readme_path.is_file() else ""
 
 setup(

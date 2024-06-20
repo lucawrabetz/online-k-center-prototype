@@ -3,7 +3,8 @@ from typing import Any, List, Dict, Tuple, Type, Optional
 
 # TODO: use logging for errors
 # from allowed_types import _ALLOWED_TYPES
-# from log_config import _LOGGER
+# from log_config import logger.LOGGER
+from optiface import logger
 
 
 class Feature:
@@ -35,12 +36,12 @@ class Feature:
         self.set_allowed_values(allowed_values)
 
     def print(self) -> None:
-        print(f"Name: {self.name}")
-        print(f"Type: {self.type}")
-        print(f"Default: {self.default}")
-        print(f"Pretty Output Name: {self.pretty_output_name}")
-        print(f"Compressed Output Name: {self.compressed_output_name}")
-        print(f"Allowed Values: {self.allowed_values}")
+        logger.LOGGER.log_body(f"Name: {self.name}")
+        logger.LOGGER.log_body(f"Type: {self.type}")
+        logger.LOGGER.log_body(f"Default: {self.default}")
+        logger.LOGGER.log_body(f"Pretty Output Name: {self.pretty_output_name}")
+        logger.LOGGER.log_body(f"Compressed Output Name: {self.compressed_output_name}")
+        logger.LOGGER.log_body(f"Allowed Values: {self.allowed_values}")
 
     @property
     def name(self) -> str:
@@ -76,6 +77,9 @@ class Feature:
         if default is None:
             raise TypeError("Default value cannot be None")
         if type(default) != feature_type:
+            logger.LOGGER.log_error(
+                f"Default value {default} does not match feature type: {feature_type}"
+            )
             raise TypeError(
                 f"Default value {default} does not match feature type: {feature_type}"
             )
@@ -101,6 +105,9 @@ class Feature:
         # static typing says Any for the values, but we check them here
         for v in allowed_values:
             if type(v) != self._type:
+                logger.LOGGER.log_error(
+                    f"Allowed value {v} does not match feature type {self._type}"
+                )
                 raise TypeError(
                     f"Allowed value {v} does not match feature type {self._type}"
                 )
