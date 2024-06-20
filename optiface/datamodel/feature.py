@@ -35,6 +35,14 @@ class Feature(ABC):
         self.set_strings(name, pretty_output_name, compressed_output_name)
         self.set_allowed_values(allowed_values)
 
+    def print(self) -> None:
+        print(f"Name: {self.name}")
+        print(f"Type: {self.type}")
+        print(f"Default: {self.default}")
+        print(f"Pretty Output Name: {self.pretty_output_name}")
+        print(f"Compressed Output Name: {self.compressed_output_name}")
+        print(f"Allowed Values: {self.allowed_values}")
+
     @property
     def name(self) -> str:
         return self._name
@@ -98,3 +106,14 @@ class Feature(ABC):
                     f"Allowed value {v} does not match feature type {self._type}"
                 )
         self.allowed_values = allowed_values
+
+
+def main() -> None:
+    RUN_ID = Feature("run_id", 0, int, "Run ID", "RunID")
+    SET_NAME = Feature("set_name", "test", str, "Set Name", "SNAME")
+    RUN_ID.print()
+    SET_NAME.print()
+
+
+if __name__ == "__main__":
+    main()
