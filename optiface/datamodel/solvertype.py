@@ -22,3 +22,21 @@ class SolverType:
     @property
     def parameters(self) -> List[feature.Feature]:
         return self._parameters
+
+    def print(self) -> None:
+        logger.log_body(f"Name: {self.name}")
+        logger.log_body(f"Parameters:")
+        for param in self.parameters:
+            param.print()
+
+
+def main():
+    GUROBI_SYMMETRY = feature.Feature("g_sym", 0, int, "Gurobi Symmetry", "GSym")
+    MIP = SolverType("MIP", [])
+    SMIP = SolverType("SMIP", [GUROBI_SYMMETRY])
+    MIP.print()
+    SMIP.print()
+
+
+if __name__ == "__main__":
+    main()
