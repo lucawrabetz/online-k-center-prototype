@@ -8,7 +8,7 @@ from optiface.datamodel import feature
 class SolverType:
     """
     Class to store all (id) information about a solver type:
-        - the convention when an instance of this class is a member
+        - the convention when an instance of this class is a member of a solver class to identify it is to store it in the _id attribute.
     """
 
     def __init__(self, name: str, parameters: List[feature.Feature] = []) -> None:
