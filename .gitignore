@@ -1,3 +1,6 @@
-__pycache__/
 dat/
 logs/
+out/
+__pycache__/
+.DS_Store
+.ipynb_checkpoints/
