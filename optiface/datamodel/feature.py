@@ -1,4 +1,3 @@
-from abc import ABC, abstractmethod
 import logging
 from typing import Any, List, Dict, Tuple, Type, Optional
 
@@ -7,7 +6,7 @@ from typing import Any, List, Dict, Tuple, Type, Optional
 # from log_config import _LOGGER
 
 
-class Feature(ABC):
+class Feature:
     """
     Fully public STRUCT for a feature.
     """
