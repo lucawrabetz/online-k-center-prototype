@@ -24,7 +24,7 @@ def main():
         )
     distance_function = DISTANCES[distance]
     if parser.parse_args().gamma == -1:
-        Ts = range(1, 51)
+        Ts = [55]
         for T in Ts:
             experiment = FLExperiment(
                 parser.parse_args().set_name, distance=distance_function, write=write

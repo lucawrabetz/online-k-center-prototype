@@ -90,14 +90,42 @@ def id_factory(set_name: str, n: List[int], T: List[int]) -> List[FLInstanceType
     return ids
 
 
+def append_to_set(set_name: str, new_T: int) -> None:
+    """
+    Append enough points to each instance in the set to reach new_T points.
+    We say append, but we actually just remove the old files and generate a new one with new_T points, for every file.
+    """
+    # read the directory dat/set_name, and store all the filenames in a list
+    set_path = os.path.join(_DAT, set_name)
+    filenames = os.listdir(set_path)
+    # for each filename, read the instance and append enough points to reach new_T
+    for filename in filenames:
+        instance_type = FLInstanceType()
+        instance_type.from_filename(filename)
+        instance = FLOfflineInstance(instance_type)
+        instance.read()
+        instance.append_points(new_T)
+        instance.write_to_csv()
+        # remove file dat/set_name/filename (old file)
+        os.remove(os.path.join(set_path, filename))
+    # construct the same TestbedGenerator instance that would have been used to generate the set all at once.
+
+
 def main():
     parser = ArgumentParser()
     parser.add_argument("--set_name", type=str, default="test")
+    parser.add_argument("--append", type=int, default=None)
+    if parser.parse_args().append is not None:
+        set_name = parser.parse_args().set_name
+        new_T = parser.parse_args().append
+        _LOGGER.log_header(f"Appending {new_T} points to testbed {set_name}")
+        append_to_set(set_name, new_T)
+        return
     set_name = parser.parse_args().set_name
     _LOGGER.log_header(f"Generating testbed {set_name}")
     num_instances = 3
     dimensions = [2]
-    time_periods = [50]
+    time_periods = [100]
     ids = id_factory(set_name, dimensions, time_periods)
     generator = TestbedGenerator(set_name, num_instances, ids)
     generator.write()

@@ -87,6 +87,9 @@ class FLOfflineInstance(Data):
         """
         Set distance matrix based on demand points.
         """
+        # check the shape of the matrix
+        if self.distances.shape != (self.id.T + 1, self.id.T + 1):
+            self.distances = np.zeros((self.id.T + 1, self.id.T + 1))
         for i in range(self.id.T):
             for j in range(i + 1, self.id.T + 1):
                 if i == j:
@@ -109,11 +112,16 @@ class FLOfflineInstance(Data):
         """
         "slice" the points and distances to the new T, destroying the rest of the data (it is available in the file, and the assumption is that instances are constructed to be used for a single T, and we also prioritize the memory conditions during the experiment)
         """
-        self.set_T = T
-        self.T = T
-        self.id.T = T
-        self.points = self.points[: T + 1]
-        self.distances = self.distances[: T + 1, : T + 1]
+        if T <= self.original_T:
+            self.set_T = T
+            self.T = T
+            self.id.T = T
+            self.points = self.points[: T + 1]
+            self.distances = self.distances[: T + 1, : T + 1]
+        else:
+            raise ValueError(
+                "New active T must be less than or equal to the original T."
+            )
 
     def first_gamma(self, Gamma: float) -> None:
         self.original_Gamma = Gamma
@@ -138,6 +146,16 @@ class FLOfflineInstance(Data):
         self.points = dist.x_unit_square()
         self.set_distance_matrix()
         self._is_set = True
+
+    def append_points(self, new_T: int) -> None:
+        """
+        Append new points to the instance, updating the distance matrix.
+        """
+        self.first_T(new_T)
+        self.id.T = new_T
+        dist = FLDistribution(self.id)
+        self.points = dist.x_unit_square()
+        self.set_distance_matrix()
 
     def set_gamma_run(self, Gamma: float):
         """
@@ -211,6 +229,7 @@ class FLOfflineInstance(Data):
             raise ValueError("Instance has no id, cannot construct filename.")
         filepath = self.id.file_path
         with open(filepath, "w", newline="") as file:
+            # overwrite file if it exists
             writer = csv.writer(file)
             writer.writerow([self.Gamma])
             for point in self.points:
