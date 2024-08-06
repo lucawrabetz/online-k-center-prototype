@@ -1,13 +1,39 @@
 import logging
-from typing import Any, List, Dict, Tuple, Type, Optional
+import logging.config
+import warnings
 
-# TODO: why was this here? - from allowed_types import _ALLOWED_TYPES
-from optiface import logger
+from typing import Any, List, Dict, Tuple, Type, Optional
+from optiface import ui
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+
+class OutputNames:
+    """
+    Small struct to hold all desired output names for a feature.
+    """
+
+    def __init__(
+        self,
+        pretty_output_name: str,
+        compressed_output_name: str,
+    ) -> None:
+        self._pretty = pretty_output_name
+        self._compressed = compressed_output_name
+
+    @property
+    def pretty(self) -> str:
+        return self._pretty
+
+    @property
+    def compressed(self) -> str:
+        return self._compressed
 
 
 class Feature:
     """
-    Fully public STRUCT for a feature.
+    Struct for a schema feature.
     """
 
     def __init__(
@@ -15,31 +41,28 @@ class Feature:
         name: str = "objective",
         default: Any = 100.0,
         feature_type: Type = float,
-        pretty_output_name: str = "Objective Value",
-        compressed_output_name: str = "Obj",
+        output_names: OutputNames = None,
+        # TODO: Allowed values should be replaced by the type just being enum.
         allowed_values: List[Any] = None,
     ) -> None:
         """
         self.set_default_and_type handles type checking for default value.
         """
         self._name: str
-        self.set_name(name)
-        # self._default: Any but after self.set_default_and_type, it is guaranteed to be of type feature_type
-        self._type: Type
         self._default: Any
+        self._type: Type
+        self._output_names: OutputNames
+        self.set_names(name, output_names)
         self.set_default_and_type(default, feature_type)
-        self._pretty_output_name: str
-        self._compressed_output_name: str
-        self.set_strings(name, pretty_output_name, compressed_output_name)
         self.set_allowed_values(allowed_values)
 
     def print(self) -> None:
-        logger.log_body(f"Name: {self.name}")
-        logger.log_body(f"Type: {self.type}")
-        logger.log_body(f"Default: {self.default}")
-        logger.log_body(f"Pretty Output Name: {self.pretty_output_name}")
-        logger.log_body(f"Compressed Output Name: {self.compressed_output_name}")
-        logger.log_body(f"Allowed Values: {self.allowed_values}")
+        ui.body(f"Name: {self.name}")
+        ui.body(f"Type: {self.type}")
+        ui.body(f"Default: {self.default}")
+        ui.body(f"Pretty Output Name: {self.pretty_output_name}")
+        ui.body(f"Compressed Output Name: {self.compressed_output_name}")
+        ui.body(f"Allowed Values: {self.allowed_values}")
 
     @property
     def name(self) -> str:
@@ -55,16 +78,20 @@ class Feature:
 
     @property
     def pretty_output_name(self) -> str:
-        return self._pretty_output_name
+        return self._output_names.pretty
 
     @property
     def compressed_output_name(self) -> str:
-        return self._compressed_output_name
+        return self._output_names.compressed
 
-    def set_name(self, name: str) -> None:
+    def set_names(self, name: str, output_names: OutputNames = None) -> None:
         if name is None:
             raise TypeError("Name cannot be None")
         self._name = name
+        if output_names is None:
+            self._output_names = OutputNames(name, name)
+        else:
+            self._output_names = output_names
 
     def set_default_and_type(self, default: Any, feature_type: Type) -> None:
         """
@@ -75,26 +102,11 @@ class Feature:
         if default is None:
             raise TypeError("Default value cannot be None")
         if type(default) != feature_type:
-            logger.log_error(
-                f"Default value {default} does not match feature type: {feature_type}"
-            )
             raise TypeError(
                 f"Default value {default} does not match feature type: {feature_type}"
             )
         self._type = type(default)
         self._default = default
-
-    def set_strings(
-        self, name: str, pretty_output_name: str, compressed_output_name: str
-    ) -> None:
-        if pretty_output_name is None:
-            self._pretty_output_name = name
-        else:
-            self._pretty_output_name = pretty_output_name
-        if compressed_output_name is None:
-            self._compressed_output_name = name
-        else:
-            self._compressed_output_name = compressed_output_name
 
     def set_allowed_values(self, allowed_values: Optional[List[Any]]) -> None:
         if allowed_values is None:
@@ -103,9 +115,6 @@ class Feature:
         # static typing says Any for the values, but we check them here
         for v in allowed_values:
             if type(v) != self._type:
-                logger.log_error(
-                    f"Allowed value {v} does not match feature type {self._type}"
-                )
                 raise TypeError(
                     f"Allowed value {v} does not match feature type {self._type}"
                 )
@@ -113,9 +122,17 @@ class Feature:
 
 
 def main() -> None:
-    RUN_ID = Feature("run_id", 0, int, "Run ID", "RunID")
-    SET_NAME = Feature("set_name", "test", str, "Set Name", "SNAME")
-    RUN_ID.print()
+    OBJ = Feature()
+    SET_NAME = Feature(
+        name="set_name",
+        default="test",
+        feature_type=str,
+        output_names=OutputNames("Set Name", "sn"),
+    )
+    ui.header("Declaring some features")
+    ui.subheader("Default Feature")
+    OBJ.print()
+    ui.subheader("Set Name Example Feature")
     SET_NAME.print()
 
 
