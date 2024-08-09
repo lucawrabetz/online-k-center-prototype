@@ -161,7 +161,7 @@ class FLOfflineInstance(Data):
             raise ValueError("T must be less than or equal to the original T.")
         self.new_active_T(T)
 
-    def read_csv_file(self, file_path: str) -> Tuple[float, List[np.ndarray]]:
+    def read_pointscsv_file(self, file_path: str) -> Tuple[float, List[np.ndarray]]:
         with open(file_path, "r") as file:
             reader = csv.reader(file)
             gamma = float(next(reader)[0])
@@ -175,7 +175,8 @@ class FLOfflineInstance(Data):
     def read(self) -> None:
         """
         Read demand points from file if it exists in instance id.
-        Update distance matrix.
+        Check if the file is a points file or a distance matrix, read accordingly.
+        Update distance matrix (if it was a points file).
         """
         if self.id.id == -1:
             raise ValueError("Instance has no id, cannot construct filename.")
@@ -184,11 +185,23 @@ class FLOfflineInstance(Data):
             raise ValueError(f"File {filepath} does not exist.")
         if not filepath.endswith(".csv"):
             raise ValueError(f"File {filepath} is not a csv.")
-        instance_data: Tuple[float, List[np.ndarray]] = self.read_csv_file(filepath)
-        self.Gamma = instance_data[0]
-        self.points = [DPoint(point) for point in instance_data[1]]
-        self.set_distance_matrix()
-        self._is_set = True
+        # check if the file is a distance matrix or a points file
+        # read the first line of the file
+        # if it has a single value (gamma) it is a points file
+        # if it has multiple values (csv header for distance matrix) it is a distance matrix file
+        with open(filepath, "r") as file:
+            reader = csv.reader(file)
+            first_line = next(reader)
+            if len(first_line) == 1:
+                instance_data: Tuple[float, List[np.ndarray]] = self.read_pointscsv_file(filepath)
+                self.Gamma = instance_data[0]
+                self.points = [DPoint(point) for point in instance_data[1]]
+                self.set_distance_matrix()
+                self._is_set = True
+            else:
+                self.distances = np.genfromtxt(filepath, delimiter=',', skip_header=1)
+                self._is_set = True
+                pass
 
     def print(self) -> None:
         _LOGGER.log_bodydebug(f"n: {self.id.n}, T: {self.id.T}, Gamma: {self.Gamma}")
