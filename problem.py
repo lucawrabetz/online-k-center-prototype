@@ -161,16 +161,10 @@ class FLOfflineInstance(Data):
             raise ValueError("T must be less than or equal to the original T.")
         self.new_active_T(T)
 
-    def read_pointscsv_file(self, file_path: str) -> Tuple[float, List[np.ndarray]]:
-        with open(file_path, "r") as file:
-            reader = csv.reader(file)
-            gamma = float(next(reader)[0])
-            arrays = []
-            for row in reader:
-                array = np.array(row, dtype=float)
-                arrays.append(array)
-
-        return gamma, arrays
+    def read_pointscsv_file(self, file) -> List[np.ndarray]:
+        data = np.genfromtxt(file, delimiter=',')
+        arrays = [row for row in data]
+        return arrays
 
     def read(self) -> None:
         """
@@ -185,21 +179,21 @@ class FLOfflineInstance(Data):
             raise ValueError(f"File {filepath} does not exist.")
         if not filepath.endswith(".csv"):
             raise ValueError(f"File {filepath} is not a csv.")
+
         # check if the file is a distance matrix or a points file
         # read the first line of the file
         # if it has a single value (gamma) it is a points file
         # if it has multiple values (csv header for distance matrix) it is a distance matrix file
         with open(filepath, "r") as file:
-            reader = csv.reader(file)
-            first_line = next(reader)
+            first_line = file.readline().strip().split(',')
             if len(first_line) == 1:
-                instance_data: Tuple[float, List[np.ndarray]] = self.read_pointscsv_file(filepath)
-                self.Gamma = instance_data[0]
-                self.points = [DPoint(point) for point in instance_data[1]]
+                self.Gamma = float(first_line[0])
+                points: List[np.ndarray] = self.read_pointscsv_file(file)
+                self.points = [DPoint(point) for point in points]
                 self.set_distance_matrix()
                 self._is_set = True
             else:
-                self.distances = np.genfromtxt(filepath, delimiter=',', skip_header=1)
+                self.distances = np.genfromtxt(file, delimiter=',', skip_header=1)
                 self._is_set = True
                 pass
 
@@ -309,9 +303,9 @@ class CCTState(Data):
             - A new facility (ell) has been built
             - An iteration has ended and we have the final service cost for the time period (previous + new point on previous facility set)
         """
-        if ell and service_cost:
+        if ell is not None and service_cost is not None:
             raise ValueError("ell and service_cost cannot be set at the same time.")
-        elif ell:
+        elif ell is not None:
             _LOGGER.log_bodydebug(
                 f"Updating state at time {self.t_index}, to add facility {ell}: {instance.points[ell].x}"
             )
@@ -324,7 +318,7 @@ class CCTState(Data):
             logging.debug(
                 f"Facilities: {self.facilities}, distances: {self.distance_to_closest_facility}."
             )
-        elif service_cost:
+        elif service_cost is not None:
             logging.debug(
                 f"Updating state at time {self.t_index}, for service cost {service_cost}."
             )
