@@ -82,6 +82,7 @@ class FLOfflineInstance(Data):
         self.set_T: int = -1
         self.distances: np.ndarray = np.zeros((self.id.T + 1, self.id.T + 1))
         self.distance: Callable[[DPoint, DPoint], float] = distance
+        self._order: List[int] = [i for i in range(self.id.T + 1)]
 
     def set_distance_matrix(self) -> None:
         """
@@ -99,7 +100,7 @@ class FLOfflineInstance(Data):
         """
         Return distance between points i and j.
         """
-        return self.distances[i][j]
+        return self.distances[self._order[i]][self._order[j]]
 
     def first_T(self, T: int) -> None:
         self.original_T = T
@@ -162,7 +163,7 @@ class FLOfflineInstance(Data):
         self.new_active_T(T)
 
     def read_pointscsv_file(self, file) -> List[np.ndarray]:
-        data = np.genfromtxt(file, delimiter=',')
+        data = np.genfromtxt(file, delimiter=",")
         arrays = [row for row in data]
         return arrays
 
@@ -185,7 +186,7 @@ class FLOfflineInstance(Data):
         # if it has a single value (gamma) it is a points file
         # if it has multiple values (csv header for distance matrix) it is a distance matrix file
         with open(filepath, "r") as file:
-            first_line = file.readline().strip().split(',')
+            first_line = file.readline().strip().split(",")
             if len(first_line) == 1:
                 self.Gamma = float(first_line[0])
                 points: List[np.ndarray] = self.read_pointscsv_file(file)
@@ -193,7 +194,9 @@ class FLOfflineInstance(Data):
                 self.set_distance_matrix()
                 self._is_set = True
             else:
-                self.distances = np.genfromtxt(file, delimiter=',', skip_header=1)
+                # don't set skipheader to True, as it was already skipped by
+                # first_line = file.readline()..... above
+                self.distances = np.genfromtxt(file, delimiter=",")
                 self._is_set = True
                 pass
 
