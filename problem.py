@@ -82,7 +82,33 @@ class FLOfflineInstance(Data):
         self.set_T: int = -1
         self.distances: np.ndarray = np.zeros((self.id.T + 1, self.id.T + 1))
         self.distance: Callable[[DPoint, DPoint], float] = distance
-        self._order: List[int] = [i for i in range(self.id.T + 1)]
+        self._permutation: str = "none"
+        self._order: List[int]
+
+    def get_offline_solution_facilities(self) -> Tuple[List[int], List[int]]:
+        """
+        Return the list of facilities set by the offline problem.
+        """
+        return [0], [i for i in range(1, self.id.T + 1)]
+
+    def set_permutation_order(self, permutation: str) -> None:
+        self._permutation = permutation
+        none_order = [i for i in range(self.id.T + 1)]
+        if permutation == "none":
+            self._order = none_order
+            return
+        # get the list of facilities set by the offline problem
+        if permutation == "full":
+            # uniform permutation of none_order
+            self._order = list(np.random.permutation(none_order))
+            return
+        offline_facilities, offline_dpoints = self.get_offline_solution_facilities()
+        if permutation == "start":
+            # change
+            self._order = offline_facilities + offline_dpoints
+        elif permutation == "end":
+            # change
+            self._order = offline_dpoints + offline_facilities
 
     def set_distance_matrix(self) -> None:
         """

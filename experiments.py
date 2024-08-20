@@ -52,6 +52,11 @@ class OutputRow:
                 self.row[feature] = instance.set_Gamma
             elif feature.name == "Gamma":
                 self.row[feature] = instance.original_Gamma
+            elif feature.name == "perm":
+                self.row[feature] = instance._permutation
+            elif feature.name == "perm_order":
+                order = [str(i) for i in instance._order]
+                self.row[feature] = "-".join(order)
             elif feature.name == "solver":
                 self.row[feature] = solver.id.name
             elif feature.name == "objective":
@@ -68,6 +73,8 @@ class OutputRow:
                 self.row[feature] = solution.num_facilities
             elif feature.name == "facilities_str":
                 self.row[feature] = solution.facilities_str
+            elif feature.name == "time_s":
+                self.row[feature] = solution.running_time_ms / 1000
 
     def validate(self) -> bool:
         return True
@@ -180,10 +187,6 @@ class FLExperiment:
     def single_run(
         self, solver_id: FLSolverType, instance: FLOfflineInstance
     ) -> OutputRow:
-        if self.gamma >= 0:
-            instance.set_gamma_run(self.gamma)
-        if self.T >= 0:
-            instance.set_T_run(self.T)
         solver = _SOLVER_FACTORY.solver(solver_id)
         solver.configure_solver(instance)
         solution: FLSolution = solver.solve(instance)
@@ -198,7 +201,7 @@ class FLExperiment:
         self.run_id += 1
         return row
 
-    def run(self) -> None:
+    def run(self, permutation: str = "none") -> None:
         gamma_str: str = ""
         T_str = ""
         if self.gamma >= 0:
@@ -215,6 +218,11 @@ class FLExperiment:
         for instance_id in self.instance_ids:
             instance = FLOfflineInstance(instance_id, distance=self.distance)
             instance.read()
+            if self.gamma >= 0:
+                instance.set_gamma_run(self.gamma)
+            if self.T >= 0:
+                instance.set_T_run(self.T)
+            instance.set_permutation_order(permutation)
             table = OutputTable()
             distance_name = self.distance.__name__.split("_")[0]
             if len(self.solver_ids) == 1:
