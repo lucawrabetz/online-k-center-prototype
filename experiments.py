@@ -213,7 +213,7 @@ class FLExperiment:
         else:
             T_str = "instance"
         _LOGGER.log_header(
-            f"Running experiment for set {self.set_name} with {gamma_str} gamma and {T_str} T"
+            f"Running experiment for set {self.set_name} with {gamma_str} gamma and {T_str} T - permutation = {permutation}"
         )
         for instance_id in self.instance_ids:
             instance = FLOfflineInstance(instance_id, distance=self.distance)
