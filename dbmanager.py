@@ -3,6 +3,7 @@ import pandas as pd
 from util import _FINALDB
 from data_model import _DATA_MODEL, _COLUMN_INDEX
 from feature_interface import IFeature
+from typing import List
 
 from log_config import setup_logging, _LOGGER
 
@@ -32,7 +33,7 @@ def add_missing_features(table: str = _FINALDB) -> None:
     df.to_csv(table, index=False)
 
 
-def remove_extra_features(table: str = _FINALDB, features: list[IFeature] = []) -> None:
+def remove_extra_features(table: str = _FINALDB, features: List[IFeature] = []) -> None:
     df = pd.read_csv(table)
     _LOGGER.log_header(f"Removing extra features from the table {table}")
     for feature in features:
