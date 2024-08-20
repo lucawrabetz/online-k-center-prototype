@@ -1,10 +1,11 @@
 import csv, os, sys
 import logging
 import numpy as np
+import pandas as pd
 from typing import Callable, List, Tuple
-from util import Data, _DAT
+from util import Data, _DAT, _FINALDB
 from log_config import _LOGGER
-from allowed_types import FLInstanceType, _TEST_SHAPE, _CCTA
+from allowed_types import FLInstanceType, _TEST_SHAPE, _CCTA, _OMIP
 
 
 class DPoint:
@@ -87,9 +88,28 @@ class FLOfflineInstance(Data):
 
     def get_offline_solution_facilities(self) -> Tuple[List[int], List[int]]:
         """
-        Return the list of facilities set by the offline problem.
+        Return the list of facilities set by the offline problem ran with the same gamma and null.
         """
-        return [0], [i for i in range(1, self.id.T + 1)]
+        final_df = pd.read_csv(_FINALDB)
+        offline_df = final_df[
+            (final_df["set_name"] == self.id.set_name) &
+            (final_df["n"] == self.id.n) &
+            (final_df["T"] == self.id.T) &
+            (final_df["T_run"] == self.set_T) &
+            (final_df["Gamma_run"] == self.set_Gamma) &
+            (final_df["id"] == self.id.id) &
+            (final_df["perm"] == "none") &
+            (final_df["solver"] == _OMIP.name) &
+            (final_df["optimal"] == True)
+        ]
+        if offline_df.empty:
+            raise ValueError("No offline solution found for this instance.")
+        if offline_df["facilities_str"].nunique() != 1:
+            raise ValueError("Multiple facilities solutions found for this instance - check your database, something is up.")
+        facilities_str = offline_df["facilities_str"].iat[0]
+        facilities = [int(i) for i in facilities_str.split("-")]
+        not_facilities = [i for i in range(self.id.T+1) if i not in facilities]
+        return facilities, not_facilities
 
     def set_permutation_order(self, permutation: str) -> None:
         self._permutation = permutation
@@ -105,10 +125,10 @@ class FLOfflineInstance(Data):
         offline_facilities, offline_dpoints = self.get_offline_solution_facilities()
         if permutation == "start":
             # change
-            self._order = offline_facilities + offline_dpoints
+            self._order = list(np.random.permutation(offline_facilities)) + list(np.random.permutation(offline_dpoints))
         elif permutation == "end":
             # change
-            self._order = offline_dpoints + offline_facilities
+            self._order = list(np.random.permutation(offline_dpoints)) + list(np.random.permutation(offline_facilities))
 
     def set_distance_matrix(self) -> None:
         """
