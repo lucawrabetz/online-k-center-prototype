@@ -32,9 +32,7 @@ def add_missing_features(table: str = _FINALDB) -> None:
     df.to_csv(table, index=False)
 
 
-def remove_extra_features(
-    table: str = _FINALDB, features=[_DATA_MODEL.features["time_s"]]
-) -> None:
+def remove_extra_features(table: str = _FINALDB, features: list[IFeature] = []) -> None:
     df = pd.read_csv(table)
     _LOGGER.log_header(f"Removing extra features from the table {table}")
     for feature in features:
@@ -43,9 +41,20 @@ def remove_extra_features(
     df.to_csv(table, index=False)
 
 
+def compute_stuff(table: str = _FINALDB) -> None:
+    df = pd.read_csv(table)
+    _LOGGER.log_header(f"Converting time to time_s")
+    # do some computations here
+    df[_DATA_MODEL.features["time_s"].name] = (
+        df[_DATA_MODEL.features["time"].name] / 1000
+    )
+    df.to_csv(table, index=False)
+
+
 def main():
     add_missing_features()
     remove_extra_features()
+    compute_stuff()
 
 
 if __name__ == "__main__":

@@ -40,6 +40,12 @@ GAMMA = IFeature("Gamma", 2, int, "Gamma", "Gamma")
 # gamma = row[GAMMA_RUN]
 GAMMA_RUN = IFeature("Gamma_run", -1, int, "Gamma", "Gamma")
 TIME_PERIODS_RUN = IFeature("T_run", -1, int, "Time Periods", "T")
+PERMUTATION = IFeature(
+    "perm", "none", str, "Permutation", "Perm", ["none", "start", "end", "full"]
+)
+PERMUTATION_ORDER = IFeature(
+    "perm_order", "none", str, "Permutation Order", "Perm Order"
+)
 
 # SOLVER is REQUIRED.
 SOLVER = IFeature("solver", _OMIP, FLSolverType, "Solver", "Sol", _SOLVERS)
@@ -64,6 +70,8 @@ features = [
     TIME_PERIODS_RUN,
     GAMMA,
     GAMMA_RUN,
+    PERMUTATION,
+    PERMUTATION_ORDER,
     SOLVER,
     OBJECTIVE,
     UNBOUNDED,
@@ -83,11 +91,14 @@ _COLUMN_INDEX = [
     TIME_PERIODS_RUN.name,
     GAMMA.name,
     GAMMA_RUN.name,
+    PERMUTATION.name,
+    PERMUTATION_ORDER.name,
     SOLVER.name,
     OBJECTIVE.name,
     UNBOUNDED.name,
     OPTIMAL.name,
     TIME.name,
+    TIME_S.name,
     IT_TIME.name,
     NUM_FACILITIES.name,
     FACILITIES_STR.name,
