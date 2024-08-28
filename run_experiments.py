@@ -18,7 +18,10 @@ def main():
     parser.add_argument("--gamma", type=int, default=-1)
     parser.add_argument("--reps", type=int, default=1)
     parser.add_argument(
-        "--perm", type=str, default="none", choices=["none", "start", "end", "full"]
+        "--perm",
+        type=str,
+        default="none",
+        choices=["none", "start", "end", "full", "nearest", "farthest"],
     )
     distance = parser.parse_args().distance
     write = parser.parse_args().write

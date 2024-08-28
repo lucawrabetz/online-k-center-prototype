@@ -201,7 +201,7 @@ class FLExperiment:
         self.run_id += 1
         return row
 
-    def run(self, permutation: str = "none") -> None:
+    def run(self, permutation: str) -> None:
         gamma_str: str = ""
         T_str = ""
         if self.gamma >= 0:
