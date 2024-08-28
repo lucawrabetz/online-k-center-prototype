@@ -92,24 +92,86 @@ class FLOfflineInstance(Data):
         """
         final_df = pd.read_csv(_FINALDB)
         offline_df = final_df[
-            (final_df["set_name"] == self.id.set_name) &
-            (final_df["n"] == self.id.n) &
-            (final_df["T"] == self.id.T) &
-            (final_df["T_run"] == self.set_T) &
-            (final_df["Gamma_run"] == self.set_Gamma) &
-            (final_df["id"] == self.id.id) &
-            (final_df["perm"] == "none") &
-            (final_df["solver"] == _OMIP.name) &
-            (final_df["optimal"] == True)
+            (final_df["set_name"] == self.id.set_name)
+            & (final_df["n"] == self.id.n)
+            & (final_df["T"] == self.id.T)
+            & (final_df["T_run"] == self.set_T)
+            & (final_df["Gamma_run"] == self.set_Gamma)
+            & (final_df["id"] == self.id.id)
+            & (final_df["perm"] == "none")
+            & (final_df["solver"] == _OMIP.name)
+            & (final_df["optimal"] == True)
         ]
         if offline_df.empty:
             raise ValueError("No offline solution found for this instance.")
         if offline_df["facilities_str"].nunique() != 1:
-            raise ValueError("Multiple facilities solutions found for this instance - check your database, something is up.")
+            raise ValueError(
+                "Multiple facilities solutions found for this instance - check your database, something is up."
+            )
         facilities_str = offline_df["facilities_str"].iat[0]
         facilities = [int(i) for i in facilities_str.split("-")]
-        not_facilities = [i for i in range(self.id.T+1) if i not in facilities]
+        not_facilities = [i for i in range(self.id.T + 1) if i not in facilities]
         return facilities, not_facilities
+
+    def min_min_distance(self, order: list[int], points: list[int]) -> int:
+        # returns the index of the point with the minimum distance to its minimum distance already ordered point.
+        min_distance = sys.float_info.max
+        min_index = -1
+        summary: str = ""
+        for point in points:
+            min_distance_point = sys.float_info.max
+            for chosen in order:
+                distance = self.distances[point][chosen]
+                if distance < min_distance_point:
+                    min_distance_point = distance
+            summary += f"{point}, mind: {min_distance_point}; "
+            if min_distance_point < min_distance:
+                min_distance = min_distance_point
+                min_index = point
+        return min_index
+
+    def max_min_distance(self, order: list[int], points: list[int]) -> int:
+        # returns the index of the point with the maximum distance to its minimum distance already ordered point.
+        max_distance = -1
+        max_index = -1
+        summary: str = ""
+        for point in points:
+            min_distance_point = sys.float_info.max
+            for chosen in order:
+                distance = self.distances[point][chosen]
+                if distance < min_distance_point:
+                    min_distance_point = distance
+            summary += f"{point}, mind: {min_distance_point}; "
+            if min_distance_point > max_distance:
+                max_distance = min_distance_point
+                max_index = point
+        return max_index
+
+    def nearest_facility_order(self) -> list[int]:
+        # start the arbitrary order as a random permutation of the original order, so we can run this 30 times
+        points: list[int] = list(
+            np.random.permutation([_ for _ in range(self.id.T + 1)])
+        )
+        order: list[int] = [points[0]]
+        points: list[int] = points[1:]
+        while len(points) > 0:
+            new_index: int = self.min_min_distance(order, points)
+            order.append(new_index)
+            points.remove(new_index)
+        return order
+
+    def farthest_facility_order(self) -> List[int]:
+        # start the arbitrary order as a random permutation of the original order, so we can run this 30 times
+        points: list[int] = list(
+            np.random.permutation([_ for _ in range(self.id.T + 1)])
+        )
+        order: list[int] = [points[0]]
+        points: list[int] = points[1:]
+        while len(points) > 0:
+            new_index: int = self.max_min_distance(order, points)
+            order.append(new_index)
+            points.remove(new_index)
+        return order
 
     def set_permutation_order(self, permutation: str) -> None:
         self._permutation = permutation
@@ -117,18 +179,28 @@ class FLOfflineInstance(Data):
         if permutation == "none":
             self._order = none_order
             return
-        # get the list of facilities set by the offline problem
-        if permutation == "full":
+        elif permutation == "full":
             # uniform permutation of none_order
             self._order = list(np.random.permutation(none_order))
             return
+        elif permutation == "nearest":
+            self._order = self.nearest_facility_order()
+            return
+        elif permutation == "farthest":
+            self._order = self.farthest_facility_order()
+            return
+        # get the list of facilities set by the offline problem
         offline_facilities, offline_dpoints = self.get_offline_solution_facilities()
         if permutation == "start":
             # change
-            self._order = list(np.random.permutation(offline_facilities)) + list(np.random.permutation(offline_dpoints))
+            self._order = list(np.random.permutation(offline_facilities)) + list(
+                np.random.permutation(offline_dpoints)
+            )
         elif permutation == "end":
             # change
-            self._order = list(np.random.permutation(offline_dpoints)) + list(np.random.permutation(offline_facilities))
+            self._order = list(np.random.permutation(offline_dpoints)) + list(
+                np.random.permutation(offline_facilities)
+            )
 
     def set_distance_matrix(self) -> None:
         """
