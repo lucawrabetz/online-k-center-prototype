@@ -113,7 +113,7 @@ class FLOfflineInstance(Data):
         not_facilities = [i for i in range(self.id.T + 1) if i not in facilities]
         return facilities, not_facilities
 
-    def min_min_distance(self, order: list[int], points: list[int]) -> int:
+    def min_min_distance(self, order: List[int], points: List[int]) -> int:
         # returns the index of the point with the minimum distance to its minimum distance already ordered point.
         min_distance = sys.float_info.max
         min_index = -1
@@ -130,7 +130,7 @@ class FLOfflineInstance(Data):
                 min_index = point
         return min_index
 
-    def max_min_distance(self, order: list[int], points: list[int]) -> int:
+    def max_min_distance(self, order: List[int], points: List[int]) -> int:
         # returns the index of the point with the maximum distance to its minimum distance already ordered point.
         max_distance = -1
         max_index = -1
@@ -147,13 +147,13 @@ class FLOfflineInstance(Data):
                 max_index = point
         return max_index
 
-    def nearest_facility_order(self) -> list[int]:
+    def nearest_facility_order(self) -> List[int]:
         # start the arbitrary order as a random permutation of the original order, so we can run this 30 times
-        points: list[int] = list(
+        points: List[int] = list(
             np.random.permutation([_ for _ in range(self.id.T + 1)])
         )
-        order: list[int] = [points[0]]
-        points: list[int] = points[1:]
+        order: List[int] = [points[0]]
+        points: List[int] = points[1:]
         while len(points) > 0:
             new_index: int = self.min_min_distance(order, points)
             order.append(new_index)
@@ -162,11 +162,11 @@ class FLOfflineInstance(Data):
 
     def farthest_facility_order(self) -> List[int]:
         # start the arbitrary order as a random permutation of the original order, so we can run this 30 times
-        points: list[int] = list(
+        points: List[int] = list(
             np.random.permutation([_ for _ in range(self.id.T + 1)])
         )
-        order: list[int] = [points[0]]
-        points: list[int] = points[1:]
+        order: List[int] = [points[0]]
+        points: List[int] = points[1:]
         while len(points) > 0:
             new_index: int = self.max_min_distance(order, points)
             order.append(new_index)
