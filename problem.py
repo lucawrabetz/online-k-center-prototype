@@ -147,47 +147,48 @@ class FLOfflineInstance(Data):
                 max_index = point
         return max_index
 
-    def nearest_facility_order(self) -> List[int]:
-        # start the arbitrary order as a random permutation of the original order, so we can run this 30 times
-        points: List[int] = list(
-            np.random.permutation([_ for _ in range(self.id.T + 1)])
-        )
-        order: List[int] = [points[0]]
-        points: List[int] = points[1:]
+    def nearest_facility_order(self, first_facility: int | None) -> List[int]:
+        first = first_facility if first_facility is not None else 0
+        points: List[int] = [i for i in range(self.id.T + 1) if i != first]
+        order: List[int] = [first]
         while len(points) > 0:
             new_index: int = self.min_min_distance(order, points)
             order.append(new_index)
             points.remove(new_index)
         return order
 
-    def farthest_facility_order(self) -> List[int]:
-        # start the arbitrary order as a random permutation of the original order, so we can run this 30 times
-        points: List[int] = list(
-            np.random.permutation([_ for _ in range(self.id.T + 1)])
-        )
-        order: List[int] = [points[0]]
-        points: List[int] = points[1:]
+    def farthest_facility_order(self, first_facility: int | None) -> List[int]:
+        first = first_facility if first_facility is not None else 0
+        points: List[int] = [i for i in range(self.id.T + 1) if i != first]
+        order: List[int] = [first]
         while len(points) > 0:
             new_index: int = self.max_min_distance(order, points)
             order.append(new_index)
             points.remove(new_index)
         return order
 
-    def set_permutation_order(self, permutation: str) -> None:
+    def set_permutation_order(self, permutation: str, first_facility: int | None) -> None:
         self._permutation = permutation
         none_order = [i for i in range(self.id.T + 1)]
         if permutation == "none":
+            if first_facility is not None:
+                raise ValueError("can't force first facility when passing none permutation")
             self._order = none_order
             return
         elif permutation == "full":
             # uniform permutation of none_order
-            self._order = list(np.random.permutation(none_order))
+            if first_facility is not None:
+                none_order.remove(first_facility)
+                rest_of_facilities = list(np.random.permutation(none_order))
+                self._order = [first_facility] + rest_of_facilities
+            else:
+                self._order = list(np.random.permutation(none_order))
             return
         elif permutation == "nearest":
-            self._order = self.nearest_facility_order()
+            self._order = self.nearest_facility_order(first_facility)
             return
         elif permutation == "farthest":
-            self._order = self.farthest_facility_order()
+            self._order = self.farthest_facility_order(first_facility)
             return
         # get the list of facilities set by the offline problem
         offline_facilities, offline_dpoints = self.get_offline_solution_facilities()

@@ -201,7 +201,7 @@ class FLExperiment:
         self.run_id += 1
         return row
 
-    def run(self, permutation: str) -> None:
+    def run(self, permutation: str, first_facility: int | None) -> None:
         gamma_str: str = ""
         T_str = ""
         if self.gamma >= 0:
@@ -222,7 +222,7 @@ class FLExperiment:
                 instance.set_gamma_run(self.gamma)
             if self.T >= 0:
                 instance.set_T_run(self.T)
-            instance.set_permutation_order(permutation)
+            instance.set_permutation_order(permutation, first_facility)
             table = OutputTable()
             distance_name = self.distance.__name__.split("_")[0]
             if len(self.solver_ids) == 1:
