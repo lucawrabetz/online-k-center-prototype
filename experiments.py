@@ -2,7 +2,7 @@ import os
 import csv
 import pandas as pd
 import logging
-from typing import Dict, List, Any, Callable
+from typing import Dict, List, Any, Callable, Optional
 from allowed_types import FLInstanceType, FLSolverType, _OMIP, _SOMIP, _CCTA
 from problem import FLOfflineInstance, FLSolution, DPoint, euclidean_distance
 from solvers import IFLSolver, OfflineMIP, SemiOfflineMIP, CCTAlgorithm, _SOLVER_FACTORY
@@ -201,7 +201,7 @@ class FLExperiment:
         self.run_id += 1
         return row
 
-    def run(self, permutation: str, first_facility: int | None) -> None:
+    def run(self, permutation: str, first_facility: Optional[int]) -> None:
         gamma_str: str = ""
         T_str = ""
         if self.gamma >= 0:
