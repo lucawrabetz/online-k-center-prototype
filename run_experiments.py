@@ -40,7 +40,9 @@ def main():
         experiment = FLExperiment(
             parser.parse_args().set_name, distance=distance_function, write=write
         )
-        experiment.configure_experiment(solver_ids=SOLVERS)
+        experiment.configure_experiment(
+            solver_ids=SOLVERS, gamma=parser.parse_args().gamma
+        )
         experiment.run(permutation=permutation, first_facility=first_facility)
     else:
         for gamma in range(150000, parser.parse_args().gamma + 1, 5000):

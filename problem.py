@@ -2,7 +2,7 @@ import csv, os, sys
 import logging
 import numpy as np
 import pandas as pd
-from typing import Callable, List, Tuple
+from typing import Callable, List, Tuple, Optional
 from util import Data, _DAT, _FINALDB
 from log_config import _LOGGER
 from allowed_types import FLInstanceType, _TEST_SHAPE, _CCTA, _OMIP
@@ -147,7 +147,7 @@ class FLOfflineInstance(Data):
                 max_index = point
         return max_index
 
-    def nearest_facility_order(self, first_facility: int | None) -> List[int]:
+    def nearest_facility_order(self, first_facility: Optional[int]) -> List[int]:
         first = first_facility if first_facility is not None else 0
         points: List[int] = [i for i in range(self.id.T + 1) if i != first]
         order: List[int] = [first]
@@ -157,7 +157,7 @@ class FLOfflineInstance(Data):
             points.remove(new_index)
         return order
 
-    def farthest_facility_order(self, first_facility: int | None) -> List[int]:
+    def farthest_facility_order(self, first_facility: Optional[int]) -> List[int]:
         first = first_facility if first_facility is not None else 0
         points: List[int] = [i for i in range(self.id.T + 1) if i != first]
         order: List[int] = [first]
@@ -167,7 +167,7 @@ class FLOfflineInstance(Data):
             points.remove(new_index)
         return order
 
-    def set_permutation_order(self, permutation: str, first_facility: int | None) -> None:
+    def set_permutation_order(self, permutation: str, first_facility: Optional[int]) -> None:
         self._permutation = permutation
         none_order = [i for i in range(self.id.T + 1)]
         if permutation == "none":
