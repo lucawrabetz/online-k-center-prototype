@@ -24,7 +24,7 @@ _FINALDB = os.path.join(_OUT, _FINALFILE)
 _SERVICEDB = os.path.join(_OUT, _SERVICE_HORIZON_FILE)
 _TIMEDB = os.path.join(_OUT, _ITERATION_TIME_FILE)
 _FACILITIESDB = os.path.join(_OUT, _FACILITIES_FILE)
-_EPSILON = 1e-2
+_EPSILON = 1e-1
 
 
 def append_date(base: str, time: bool = True) -> str:
