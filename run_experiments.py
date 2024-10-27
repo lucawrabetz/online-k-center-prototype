@@ -15,7 +15,8 @@ def main():
     parser.add_argument("--set_name", type=str, default="test")
     parser.add_argument("--distance", type=str, default="euclidean")
     parser.add_argument("--write", type=bool, default=True)
-    parser.add_argument("--gamma", type=int, default=-1)
+    parser.add_argument("--gamma", type=int, default=None)
+    parser.add_argument("--T", type=int, default=None)
     parser.add_argument("--reps", type=int, default=-1)
     parser.add_argument(
         "--perm",
@@ -41,7 +42,9 @@ def main():
             parser.parse_args().set_name, distance=distance_function, write=write
         )
         experiment.configure_experiment(
-            solver_ids=SOLVERS, gamma=parser.parse_args().gamma
+            solver_ids=SOLVERS,
+            gamma=parser.parse_args().gamma,
+            T=parser.parse_args().T,
         )
         experiment.run(permutation=permutation, first_facility=first_facility)
     else:
