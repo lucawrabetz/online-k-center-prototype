@@ -2,7 +2,7 @@
 ## Instructions
 1. Install the required packages (you might already have them in your base environment):
 ```bash
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 ```
 
 2. You will need a [gurobi license](https://www.gurobi.com/academia/academic-program-and-licenses/) for the MIP based offline problems.
@@ -15,7 +15,7 @@ python3 run_experiments.py --setname synthetic
 python3 run_experiments.py --setname northeastdhl
 ```
 
-4. You can run more complex experiments with different arguments, such as changing the fixed cost, changing the permutation, etc. Run the following command to see the options:
+4. You can run more complex experiments with different arguments, such as changing the fixed cost, changing the permutation (arrival order of the online demand points), etc. Run the following command to see the options:
 ```bash
 python3 run_experiments.py --help
 ```
