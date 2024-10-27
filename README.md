@@ -21,7 +21,7 @@ python3 run_experiments.py --help
 ```
 
 ## Instance Data (OR Paper Submission):
-Instances are saved in the `dat` directory, at `dat/<setname>/<setname>_n_T.csv`.
+Instances are saved in the `dat` directory, at `dat/<setname>/<setname>_n_T_rep.csv`, where `rep` denotes the number of the instance if it is in a testbed with other identically named instances (for example, when we generate synthetic testbeds, we generate 30 instances with the same 'shape').
 
 ### Instance Format
 The instances come in two different formats. First, the 'points' format, which is how the synthetic instances are encoded, lists the points on each line of a csv file. A 'point' is listed on a line with each coordinate separated by a space. For this format, we also encode a default fixed cost with a single float on the first line before the points, though this can be overriden when you run an experiment.
