@@ -21,7 +21,7 @@ def main():
         "--perm",
         type=str,
         default="none",
-        choices=["none", "start", "end", "full", "nearest", "farthest"],
+        choices=["none", "full", "nearest", "farthest"],
     )
     parser.add_argument("--firstf", type=int, default=-1)
     distance = parser.parse_args().distance
@@ -35,7 +35,7 @@ def main():
         )
     distance_function = DISTANCES[distance]
     permutation = parser.parse_args().perm
-    SOLVERS = [_CCTA, _OMIP]
+    SOLVERS = _SOLVERS
     if parser.parse_args().reps == -1:
         experiment = FLExperiment(
             parser.parse_args().set_name, distance=distance_function, write=write

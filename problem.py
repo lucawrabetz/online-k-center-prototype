@@ -132,7 +132,7 @@ class FLOfflineInstance(Data):
 
     def max_min_distance(self, order: List[int], points: List[int]) -> int:
         # returns the index of the point with the maximum distance to its minimum distance already ordered point.
-        max_distance = -1
+        max_distance = -1.0
         max_index = -1
         summary: str = ""
         for point in points:
@@ -167,12 +167,16 @@ class FLOfflineInstance(Data):
             points.remove(new_index)
         return order
 
-    def set_permutation_order(self, permutation: str, first_facility: Optional[int]) -> None:
+    def set_permutation_order(
+        self, permutation: str, first_facility: Optional[int]
+    ) -> None:
         self._permutation = permutation
         none_order = [i for i in range(self.id.T + 1)]
         if permutation == "none":
             if first_facility is not None:
-                raise ValueError("can't force first facility when passing none permutation")
+                raise ValueError(
+                    "can't force first facility when passing none permutation"
+                )
             self._order = none_order
             return
         elif permutation == "full":
