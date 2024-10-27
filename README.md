@@ -1,6 +1,26 @@
 # online min-max center problem.
+## Instructions
+1. Install the required packages (you might already have them in your base environment):
+```bash
+pip install -r requirements.txt
+```
 
-## Instance data (OR Paper Submission):
+2. You will need a [gurobi license](https://www.gurobi.com/academia/academic-program-and-licenses/) for the MIP based offline problems.
+
+3. Run the following commands to run the solvers on the synthetic and DHL datasets with the default arguments:
+```bash
+python3 run_experiments.py --setname synthetic
+```
+```bash
+python3 run_experiments.py --setname northeastdhl
+```
+
+4. You can run more complex experiments with different arguments, such as changing the fixed cost, changing the permutation, etc. Run the following command to see the options:
+```bash
+python3 run_experiments.py --help
+```
+
+## Instance Data (OR Paper Submission):
 Instances are saved in the `dat` directory, at `dat/<setname>/<setname>_n_T.csv`.
 
 ### Instance Format
@@ -20,26 +40,6 @@ This will create a directory `dat/newsetname` with the instances generated with 
 
 ### DHL Facilities Experiment
 The testbed for section 5.2 is located at `dat/northeastdhl`.
-
-
-## Instructions:
-
-1. Install the required packages (you might already have them in your base environment):
-```bash
-pip install -r requirements.txt
-```
-
-2. Run the following command:
-```bash
-python run_experiments.py --help
-```
-
-2. Understand args and run again, e.g.:
-```bash
-python run_experiments.py --set_name test
-python run_experiments.py --set_name test --gamma 2
-python run_experiments.py --set_name test --gamma 2 --perm full
-```
 
 ## Notes on final.csv schema:
 For permuations: you can pass none, start, end, full to the permutation argument. When we store the results in final.csv, we store the permuation in the perm_order column, and the indices are the indices of the original ordering. All other columns that use indices of points, such as the facilities column or facilities file, are stored in the permuted ordering, so they are a function of the permutation.
